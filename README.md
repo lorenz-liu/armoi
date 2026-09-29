@@ -33,30 +33,30 @@ armoi/
 ## Quick start
 
 ```bash
-# backend
-cd infra
-uv venv --python 3.13 .venv && uv pip install -e '.[dev]'
-cp .env.example .env
-.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# mobile, in a second shell
-cd mobile
-npm install
-cp .env.example .env        # set EXPO_PUBLIC_API_BASE_URL
-npx expo start
+make dev
 ```
 
-On a physical device, point `EXPO_PUBLIC_API_BASE_URL` at your machine's LAN
-address rather than `localhost`.
+That installs both dependency sets on first run, seeds the `.env` files from
+their examples, then starts the API and the Expo dev server together. Stopping
+it stops both.
 
-## Tests
+On a physical device, set `EXPO_PUBLIC_API_BASE_URL` in `mobile/.env` to your
+machine's LAN address rather than `localhost`.
 
-```bash
-cd infra  && .venv/bin/python -m pytest && .venv/bin/ruff check app tests scripts
-cd mobile && npm run typecheck && npm run lint && npm test
-```
+## Make targets
 
-72 backend tests, 73 mobile tests.
+| Target | Does |
+| --- | --- |
+| `make dev` | Backend and Expo dev server together. |
+| `make api` / `make app` | Just one side. |
+| `make db reset` | Delete the database and uploaded images (asks first). |
+| `make test` | Both suites — 72 backend, 73 mobile. |
+| `make lint` | ruff, then tsc and eslint. |
+| `make categories` | Regenerate the category tree from `TODO.md`. |
+| `make install` | Dependencies and `.env` files only. |
+| `make clean` | Remove artefacts, caches and installed dependencies. |
+
+`make help` lists them. Override any setting inline, e.g. `make dev API_PORT=9000`.
 
 ## Design notes
 

@@ -5,6 +5,8 @@ vocabularies, the category tree and the uploaded item images.
 
 ## Run
 
+From the repository root, `make api` (or `make dev` for both sides). By hand:
+
 ```bash
 uv venv --python 3.13 .venv
 uv pip install -e '.[dev]'

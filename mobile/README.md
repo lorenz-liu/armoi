@@ -4,6 +4,8 @@ Expo SDK 57 · React Native 0.86 · React 19 · TypeScript 6 · expo-router.
 
 ## Run
 
+From the repository root, `make app` (or `make dev` for both sides). By hand:
+
 ```bash
 npm install
 cp .env.example .env        # point EXPO_PUBLIC_API_BASE_URL at your backend
