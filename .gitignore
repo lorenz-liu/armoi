@@ -1,0 +1,47 @@
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
+
+# ---- Python / infra ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+infra/data/
+infra/media/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# ---- Node / mobile ----
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.tsbuildinfo
+mobile/ios/
+mobile/android/
+
+# ---- Secrets ----
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ---- Logs ----
+*.log
+npm-debug.log*
+yarn-error.log*

@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Armoi",
+    "slug": "armoi",
+    "scheme": "armoi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F6EEE1",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F6EEE1"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.armoi.app"
+    },
+    "android": {
+      "package": "com.armoi.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F6EEE1",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Armoi needs access to your photos so you can add pictures of your items."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
