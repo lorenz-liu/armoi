@@ -24,7 +24,8 @@ import { useI18n } from '@/i18n';
 import { layout, space } from '@/theme';
 
 export type LibraryScreenProps = {
-  title: string;
+  /** Omitted by the main library, which needs no caption for itself. */
+  title?: string;
   eyebrow?: string;
   source: (query: ItemQuery) => Promise<Page<ItemSummary>>;
   onSelectItem: (item: ItemSummary) => void;
@@ -88,13 +89,15 @@ export function LibraryScreen({
 
   return (
     <Screen>
+      {/* Fixed chrome, outside the list: the grid remounts when the column
+          count changes, and the controls must not move when it does. */}
+      {header}
       <LibraryGrid
         items={library.items}
         mode={viewMode}
         onSelect={onSelectItem}
         onRefresh={library.refetch}
         refreshing={library.loading && !library.initialLoading}
-        header={header}
         empty={empty}
         footerInset={insets.bottom + layout.touchTarget + space.lg}
       />

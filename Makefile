@@ -7,8 +7,16 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 PYTHON_VERSION ?= 3.13
+# 0.0.0.0 so a phone on the same Wi-Fi can reach the API, not just this machine.
 API_HOST       ?= 0.0.0.0
 API_PORT       ?= 8000
+
+# This machine's LAN address, for the "open it on your phone" hint. Detection
+# is best-effort; override with `make dev LAN_IP=192.168.1.5` if it guesses
+# wrong or you are on an unusual interface.
+LAN_IP ?= $(shell ipconfig getifaddr en0 2>/dev/null \
+	|| ipconfig getifaddr en1 2>/dev/null \
+	|| hostname -I 2>/dev/null | awk '{ print $$1 }')
 
 INFRA  := infra
 MOBILE := mobile
@@ -31,7 +39,8 @@ help:
 		| sed -e 's/^## //' \
 		| awk -F': ' '{ printf "  \033[1m%-14s\033[0m %s\n", $$1, $$2 }'
 	@echo
-	@echo "  API on http://localhost:$(API_PORT) — docs at /docs"
+	@echo "  API   http://localhost:$(API_PORT) — docs at /docs"
+	@if [ -n "$(LAN_IP)" ]; then echo "  LAN   http://$(LAN_IP):$(API_PORT) — reachable from your phone"; fi
 
 # --- bootstrap --------------------------------------------------------------
 # Sentinel targets: each installs only when its marker is missing or stale.
@@ -58,8 +67,9 @@ install: $(PY) $(MOBILE)/node_modules $(INFRA)/.env $(MOBILE)/.env
 
 ## dev: run the backend and the Expo dev server together
 dev: install
-	@echo "→ api  http://localhost:$(API_PORT)"
-	@echo "→ app  Expo dev server (press ? for its menu)"
+	@echo "→ api   http://localhost:$(API_PORT)$(if $(LAN_IP),  ·  http://$(LAN_IP):$(API_PORT) (LAN))"
+	@echo "→ app   Expo dev server (press ? for its menu)"
+	@echo "→ phone scan the QR code; the app finds the API on the same host"
 	@echo
 	@( cd $(INFRA) && exec $(BIN)/uvicorn app.main:app \
 		--reload --host $(API_HOST) --port $(API_PORT) ) & \

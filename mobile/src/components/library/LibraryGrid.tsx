@@ -1,10 +1,13 @@
 /**
- * The library surface, shared by the main screen and the brand/storage pages.
+ * The scrolling item surface, shared by the main screen and the brand and
+ * storage pages.
  *
- * Cell width solves  n·w + (n−1)·gap + 2·gutter = viewport  (see `theme`),
- * so all four view modes sit on the same 4pt grid with identical outer
- * margins. `big` additionally alternates the caption alignment to give the
- * single-column run the asymmetric, magazine-spread rhythm the brief asks for.
+ * Cell width solves  n·w + (n−1)·gap + 2·gutter = viewport  (see `theme`).
+ * The gutter is applied once, on the content container, and is the same in
+ * every view mode — switching density changes only the cells, never the page
+ * margins. The header is deliberately *not* a `ListHeaderComponent`: changing
+ * `numColumns` forces a remount, which would make the search field and
+ * controls jump as the view mode changed.
  */
 
 import { FlatList, RefreshControl, View, useWindowDimensions } from 'react-native';
@@ -15,13 +18,15 @@ import { color, columnsFor, gridCellWidth, layout, space } from '@/theme';
 import { ItemCard } from './ItemCard';
 import { ItemRow } from './ItemRow';
 
+/** Lets tests assert what is, and is not, inside the scrolling surface. */
+export const LIBRARY_GRID_TEST_ID = 'library-grid';
+
 export type LibraryGridProps = {
   items: ItemSummary[];
   mode: ViewMode;
   onSelect: (item: ItemSummary) => void;
   onRefresh: () => void;
   refreshing: boolean;
-  header?: React.ReactElement;
   empty?: React.ReactElement;
   footerInset?: number;
 };
@@ -32,7 +37,6 @@ export function LibraryGrid({
   onSelect,
   onRefresh,
   refreshing,
-  header,
   empty,
   footerInset = 0,
 }: LibraryGridProps) {
@@ -40,23 +44,24 @@ export function LibraryGrid({
   const columns = columnsFor(mode);
   const cellWidth = gridCellWidth(width, columns);
   const isList = mode === 'list';
+  const isSingleColumn = columns === 1;
 
   return (
     <FlatList
+      testID={LIBRARY_GRID_TEST_ID}
       data={items}
       // Remounting on a column change is required: FlatList cannot reflow numColumns.
       key={mode}
       keyExtractor={(item) => String(item.id)}
       numColumns={isList ? 1 : columns}
-      ListHeaderComponent={header}
       ListEmptyComponent={empty}
-      columnWrapperStyle={
-        columns > 1 && !isList ? { gap: layout.gap, paddingHorizontal: layout.gutter } : undefined
-      }
+      columnWrapperStyle={isSingleColumn || isList ? undefined : { gap: layout.gap }}
       contentContainerStyle={{
+        // Identical in every mode — this is what keeps the page from shifting.
+        paddingHorizontal: layout.gutter,
+        paddingTop: space.sm,
         paddingBottom: footerInset + space.xxl,
         gap: isList ? layout.listGap : layout.gap,
-        paddingHorizontal: columns === 1 ? layout.gutter : 0,
       }}
       renderItem={({ item, index }) =>
         isList ? (
@@ -65,7 +70,7 @@ export function LibraryGrid({
           <ItemCard
             item={item}
             mode={mode}
-            width={columns === 1 ? undefined : cellWidth}
+            width={isSingleColumn ? undefined : cellWidth}
             flipped={mode === 'big' && index % 2 === 1}
             onPress={() => onSelect(item)}
           />

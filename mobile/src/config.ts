@@ -19,10 +19,36 @@
  * column count, g the inter-column gap, G the page gutter and W the viewport.
  */
 
+import Constants from 'expo-constants';
+
 // ── Backend ────────────────────────────────────────────────────────────────
+/** Port the FastAPI backend listens on. */
+export const API_PORT = Number(process.env.EXPO_PUBLIC_API_PORT ?? 8000);
+
+/**
+ * Where the backend lives.
+ *
+ * On a physical device `localhost` is the phone itself, so the default is
+ * taken from whichever host is serving the bundle: Metro already knows the
+ * machine's LAN address, and the backend binds the same interface. That makes
+ * testing on a real phone work with no configuration at all.
+ *
+ * Set `EXPO_PUBLIC_API_BASE_URL` to override — a deployed server, or a tunnel.
+ */
+function resolveBaseUrl(): string {
+  const explicit = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (explicit) return explicit.replace(/\/+$/, '');
+
+  const hostUri =
+    (Constants.expoConfig as { hostUri?: string } | null)?.hostUri ??
+    Constants.expoGoConfig?.debuggerHost ??
+    '';
+  const host = hostUri.split(':')[0];
+  return `http://${host || 'localhost'}:${API_PORT}`;
+}
+
 export const API = {
-  /** Overridden per environment through `EXPO_PUBLIC_API_BASE_URL`. */
-  baseUrl: (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000').replace(/\/+$/, ''),
+  baseUrl: resolveBaseUrl(),
   prefix: '/api/v1',
   timeoutMs: 15_000,
   retries: 2,
@@ -132,13 +158,11 @@ export const LIST_ROW_THUMB_UNITS = 16; // 64pt
  * if a third is ever added.
  */
 export const RAIL = {
-  widthUnits: 11, //        44pt — the minimum comfortable touch target
-  tabHeightUnits: 24, //    96pt per tab
-  paddingUnits: SPACE_STEPS.sm,
-  /** Fraction of the rail that peeks out past the screen edge when closed. */
-  restingPeek: 1,
-  panelWidthFraction: 0.82,
-  animationMs: 260,
+  // Wide enough for an upright label under the icon: rotated text would set
+  // CJK glyphs on their side, so nothing in the rail is rotated.
+  widthUnits: 14, //        56pt — comfortably past the 44pt touch minimum
+  tabHeightUnits: 18, //    72pt per tab
+  paddingUnits: SPACE_STEPS.xs,
 } as const;
 
 // ── Motion ─────────────────────────────────────────────────────────────────

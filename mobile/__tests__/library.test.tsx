@@ -1,8 +1,16 @@
 /** Facet bookkeeping and the library grid's view modes. */
 
-import type { ItemSummary } from '@/api';
-import { LibraryGrid } from '@/components';
+import type { TestInstance } from 'test-renderer';
+
+import type { ViewStyle } from 'react-native';
+
+import type { ItemSummary, Page } from '@/api';
+import { LIBRARY_GRID_TEST_ID, LibraryGrid, LibraryHeader } from '@/components';
 import { VIEW_MODES } from '@/config';
+import { LibraryScreen } from '@/features/LibraryScreen';
+import { layout } from '@/theme';
+
+const emptyPage: Page<ItemSummary> = { items: [], total: 0, limit: 40, offset: 0 };
 import { EMPTY_FACETS, countActiveFacets } from '@/hooks/useLibrary';
 
 import { renderWithProviders, screen, userEvent } from '../test-utils/render';
@@ -91,5 +99,79 @@ describe('LibraryGrid', () => {
   it('renders the empty component when there is nothing to show', async () => {
     await renderGrid({ items: [], empty: <></> });
     expect(screen.queryByText('Wool Coat')).toBeNull();
+  });
+});
+
+/** Walks up from a node to see whether it sits inside the scrolling list. */
+function isInsideGrid(node: TestInstance | null): boolean {
+  for (let current = node?.parent; current; current = current.parent) {
+    if (current.props?.testID === LIBRARY_GRID_TEST_ID) return true;
+  }
+  return false;
+}
+
+describe('layout stability across view modes', () => {
+  /** The regression: page margins must not depend on the column count. */
+  it.each(VIEW_MODES)('applies the standard gutter in %s mode, like every other', async (mode) => {
+    await renderGrid({ mode });
+    const style = screen.getByTestId(LIBRARY_GRID_TEST_ID).props
+      .contentContainerStyle as ViewStyle;
+    expect(style.paddingHorizontal).toBe(layout.gutter);
+  });
+
+  it('renders the search field outside the list, which remounts on a column change', async () => {
+    await renderWithProviders(
+      <LibraryScreen source={async () => emptyPage} onSelectItem={jest.fn()} />,
+    );
+    // Inside the list it would be a ListHeaderComponent, torn down and rebuilt
+    // whenever numColumns changed — which is what made the controls jump.
+    expect(isInsideGrid(screen.getByPlaceholderText('Search your library'))).toBe(false);
+  });
+
+  it('keeps the controls in place when the view mode changes', async () => {
+    await renderWithProviders(
+      <LibraryScreen source={async () => emptyPage} onSelectItem={jest.fn()} />,
+    );
+    const before = screen.getByPlaceholderText('Search your library').parent;
+
+    await userEvent.press(screen.getByLabelText('Small'));
+
+    const after = screen.getByPlaceholderText('Search your library').parent;
+    expect(after?.props.style).toEqual(before?.props.style);
+  });
+});
+
+describe('LibraryHeader', () => {
+  const header = (props: Partial<React.ComponentProps<typeof LibraryHeader>> = {}) =>
+    renderWithProviders(
+      <LibraryHeader
+        count={3}
+        search=""
+        onSearchChange={jest.fn()}
+        viewMode="medium"
+        onViewModeChange={jest.fn()}
+        sort="created_at"
+        order="desc"
+        onSortChange={jest.fn()}
+        activeFilters={0}
+        onOpenFilters={jest.fn()}
+        {...props}
+      />,
+    );
+
+  it('shows no title on the main library, which needs no caption', async () => {
+    await header();
+    expect(screen.queryByText('Library')).toBeNull();
+    expect(screen.getByPlaceholderText('Search your library')).toBeTruthy();
+  });
+
+  it('shows the title where it identifies a brand or a place', async () => {
+    await header({ title: 'Totême', eyebrow: 'Brands', onBack: jest.fn() });
+    expect(screen.getByText('Totême')).toBeTruthy();
+  });
+
+  it('keeps the item count visible without spending a row on it', async () => {
+    await header();
+    expect(screen.getByText('3 pieces')).toBeTruthy();
   });
 });

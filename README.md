@@ -40,8 +40,13 @@ That installs both dependency sets on first run, seeds the `.env` files from
 their examples, then starts the API and the Expo dev server together. Stopping
 it stops both.
 
-On a physical device, set `EXPO_PUBLIC_API_BASE_URL` in `mobile/.env` to your
-machine's LAN address rather than `localhost`.
+### On your phone
+
+Scan the QR code from `make dev` with the phone on the same Wi-Fi. No
+configuration is needed: the API binds `0.0.0.0`, and the app derives its
+address from whichever host served the bundle, so a phone reaches your
+machine's LAN IP and a simulator reaches `127.0.0.1`. `make dev` prints both
+URLs. Override with `EXPO_PUBLIC_API_BASE_URL` only to point elsewhere.
 
 ## Make targets
 

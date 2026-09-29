@@ -12,8 +12,17 @@ cp .env.example .env        # point EXPO_PUBLIC_API_BASE_URL at your backend
 npx expo start
 ```
 
-On a physical device set `EXPO_PUBLIC_API_BASE_URL` to your machine's LAN
-address (`http://192.168.x.x:8000`) — `localhost` resolves to the phone.
+### Testing on a real phone
+
+Nothing to configure. The app takes the backend host from whichever machine is
+serving the bundle: `Constants.expoConfig.hostUri` is `192.168.x.x:8081` when
+Metro is reached over the LAN, so the API resolves to `http://192.168.x.x:8000`
+on a phone and `http://127.0.0.1:8000` in a simulator. The backend binds
+`0.0.0.0`, so both work.
+
+Just make sure the phone is on the same Wi-Fi and macOS's firewall is not
+blocking Python. Set `EXPO_PUBLIC_API_BASE_URL` only to point somewhere else —
+a deployed server or a tunnel.
 
 ## Checks
 

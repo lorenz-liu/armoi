@@ -22,7 +22,6 @@ export default function LibraryRoute() {
 
   return (
     <LibraryScreen
-      title={t('library.title')}
       source={source}
       onSelectItem={(item) => router.push(`/item/${item.id}`)}
       emptyAction={{ label: t('library.addItem'), onPress: () => router.push('/item/edit') }}

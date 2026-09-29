@@ -1,8 +1,12 @@
 /**
- * The header shared by the library, brand and storage screens: a title block,
- * the search field, and one control row carrying sort, filter and the view
- * switcher. Keeping the three surfaces on one component is what guarantees
- * they behave identically.
+ * The header shared by the library, brand and storage screens: the search
+ * field and one control row carrying sort, filter, the item count and the
+ * view switcher. Keeping the three surfaces on one component is what
+ * guarantees they behave identically.
+ *
+ * The title row is optional and appears only when it says something the user
+ * cannot already see — which brand or which storage place is being shown. The
+ * main library needs no caption for itself.
  */
 
 import { View } from 'react-native';
@@ -23,8 +27,8 @@ const VIEW_ICONS = {
 } as const satisfies Record<ViewMode, string>;
 
 export type LibraryHeaderProps = {
-  title: string;
-  subtitle?: string;
+  /** Omit on the main library; pass the brand or storage name elsewhere. */
+  title?: string;
   /** Rendered above the title — the brand/storage screens show the parent here. */
   eyebrow?: string;
   count: number;
@@ -42,7 +46,6 @@ export type LibraryHeaderProps = {
 
 export function LibraryHeader({
   title,
-  subtitle,
   eyebrow,
   count,
   search,
@@ -77,27 +80,30 @@ export function LibraryHeader({
 
   return (
     <View style={{ paddingHorizontal: layout.gutter, paddingBottom: space.sm, gap: space.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: space.xs }}>
-        {onBack ? (
-          <IconButton
-            name="chevron-left"
-            label={t('nav.back')}
-            onPress={onBack}
-            style={{ marginLeft: -space.sm, marginTop: -space.xxs }}
-          />
-        ) : null}
-        <View style={{ flex: 1, gap: space.xxs }}>
-          {eyebrow ? (
-            <Text variant="overline" tone="faint">
-              {eyebrow}
-            </Text>
+      {title || onBack ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
+          {onBack ? (
+            <IconButton
+              name="chevron-left"
+              label={t('nav.back')}
+              onPress={onBack}
+              style={{ marginLeft: -space.sm }}
+            />
           ) : null}
-          <Text variant="display">{title}</Text>
-          <Text variant="caption" tone="muted">
-            {subtitle ?? plural('library.count', count)}
-          </Text>
+          <View style={{ flex: 1, gap: space.xxs }}>
+            {eyebrow ? (
+              <Text variant="overline" tone="faint">
+                {eyebrow}
+              </Text>
+            ) : null}
+            {title ? (
+              <Text variant="title" numberOfLines={1}>
+                {title}
+              </Text>
+            ) : null}
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <TextField
         value={search}
@@ -123,6 +129,9 @@ export function LibraryHeader({
           onPress={onOpenFilters}
         />
         <View style={{ flex: 1 }} />
+        <Text variant="micro" tone="faint" numberOfLines={1}>
+          {plural('library.count', count)}
+        </Text>
         <SegmentedControl segments={viewSegments} value={viewMode} onChange={onViewModeChange} />
       </View>
 
