@@ -10,6 +10,7 @@ export {
   SelectSheet,
   type SelectOption,
   type SelectProps,
+  type SelectVariant,
 } from './Select';
 export { Sheet, type SheetProps } from './Sheet';
 export { Surface, type SurfaceProps } from './Surface';

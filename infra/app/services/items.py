@@ -8,27 +8,39 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.categories_data import CATEGORY_BY_ID, CATEGORY_IDS
-from app.config import CATEGORY_PATH_SEPARATOR, DEFAULT_PAGE_SIZE, SEASONS
+from app.config import (
+    CATEGORY_PATH_SEPARATOR,
+    DEFAULT_ORDER,
+    DEFAULT_PAGE_SIZE,
+    DEFAULT_SORT,
+    SEASONS,
+)
 from app.errors import NOT_FOUND, UNPROCESSABLE
 from app.models import Brand, Item, ItemImage, ItemPairing, ItemSeason, Storage
 from app.schemas import ImageRead, ItemRead, ItemSummary, ItemWrite
 from app.services import images as image_service
 from app.services import vocabulary
 
-SORT_FIELDS = {
+#: Sort name -> column. The names themselves are configuration; this is the
+#: one place the ORM is in scope to bind them.
+#:
+#: `last_used` relies on SQLite's NULL ordering, which happens to be exactly
+#: right here: ascending puts never-worn pieces first ("longest unused"), and
+#: descending puts them last ("recently worn"). `test_sorting` pins that down.
+SORT_COLUMNS = {
     "created_at": Item.created_at,
     "updated_at": Item.updated_at,
     "name": Item.name,
     "price": Item.price_amount,
+    "last_used": Item.last_used_date,
 }
-DEFAULT_SORT = "created_at"
-DEFAULT_ORDER = "desc"
 
 
 @dataclass(slots=True)
@@ -124,7 +136,7 @@ def build_query(filters: ItemFilters) -> Select:
     if filters.max_price is not None:
         stmt = stmt.where(Item.price_amount <= filters.max_price)
 
-    column = SORT_FIELDS.get(filters.sort, SORT_FIELDS[DEFAULT_SORT])
+    column = SORT_COLUMNS.get(filters.sort, SORT_COLUMNS[DEFAULT_SORT])
     direction = column.desc() if filters.order == "desc" else column.asc()
     # id is the tiebreaker so paging stays stable when sort keys collide.
     return stmt.order_by(direction, Item.id.desc())
@@ -232,6 +244,25 @@ def update_item(session: Session, item: Item, payload: ItemWrite) -> Item:
     return item
 
 
+def mark_used(session: Session, item: Item, used_on: date | None = None) -> Item:
+    """Record that the piece was worn.
+
+    Falls back to the server's UTC date; clients send their own local date so
+    a timezone gap cannot record yesterday.
+    """
+    item.last_used_date = used_on or datetime.now(UTC).date()
+    session.flush()
+    session.refresh(item)
+    return item
+
+
+def clear_used(session: Session, item: Item) -> Item:
+    item.last_used_date = None
+    session.flush()
+    session.refresh(item)
+    return item
+
+
 def delete_item(session: Session, item: Item) -> None:
     image_service.delete_images_for_item(session, item)
     session.delete(item)
@@ -264,6 +295,7 @@ def serialize_summary(item: Item) -> ItemSummary:
         price_currency=item.price_currency,
         cover_image=serialize_image(item.images[0]) if item.images else None,
         image_count=len(item.images),
+        last_used_date=item.last_used_date,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )

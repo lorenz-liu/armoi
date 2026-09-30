@@ -8,6 +8,7 @@ export {
   type RailTab,
 } from './EdgeRail';
 export { FilterSheet } from './FilterSheet';
+export { FloatingViewSwitcher } from './FloatingViewSwitcher';
 export { GridSpacer, LibraryGrid, LIBRARY_GRID_TEST_ID } from './LibraryGrid';
 export {
   LIBRARY_TOOLBAR_TEST_ID,
@@ -21,3 +22,4 @@ export { ItemCard } from './ItemCard';
 export { ItemPhoto } from './ItemImage';
 export { ItemRow } from './ItemRow';
 export { SeasonDots } from './SeasonDots';
+export { UsageButton } from './UsageButton';

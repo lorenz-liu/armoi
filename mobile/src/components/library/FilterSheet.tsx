@@ -157,7 +157,7 @@ function FilterSheetBody({ visible, facets, onClose, onApply, hidden = [] }: Fil
                   }
                   keyboardType="decimal-pad"
                   placeholder="0"
-                  accessibilityLabel={`${t('filter.price')} ${t('sort.asc')}`}
+                  accessibilityLabel={t('filter.minPrice')}
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -168,7 +168,7 @@ function FilterSheetBody({ visible, facets, onClose, onApply, hidden = [] }: Fil
                   }
                   keyboardType="decimal-pad"
                   placeholder="∞"
-                  accessibilityLabel={`${t('filter.price')} ${t('sort.desc')}`}
+                  accessibilityLabel={t('filter.maxPrice')}
                 />
               </View>
             </View>

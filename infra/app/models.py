@@ -21,10 +21,11 @@ filtering a ``LIKE 'clothing.tops%'`` prefix match.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -117,6 +118,10 @@ class Item(TimestampMixin, Base):
 
     notes: Mapped[str | None] = mapped_column(Text().with_variant(String(MAX_NOTES_LENGTH), "sqlite"))
 
+    # A plain date, not a timestamp: "worn today" is a calendar fact, and the
+    # client sends *its* today so the answer does not depend on server time.
+    last_used_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
     brand: Mapped[Brand | None] = relationship(back_populates="items", lazy="joined")
     storage: Mapped[Storage | None] = relationship(back_populates="items", lazy="joined")
     seasons: Mapped[list[ItemSeason]] = relationship(
@@ -140,6 +145,7 @@ class Item(TimestampMixin, Base):
         Index("ix_items_brand_id", "brand_id"),
         Index("ix_items_storage_id", "storage_id"),
         Index("ix_items_name", "name"),
+        Index("ix_items_last_used_date", "last_used_date"),
     )
 
     @property

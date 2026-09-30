@@ -82,9 +82,26 @@ export const CURRENCY_SYMBOLS: Record<(typeof CURRENCIES)[number], string> = {
   TWD: 'NT$', SGD: 'S$', AUD: 'A$', CAD: 'C$', CHF: 'CHF', SEK: 'kr', THB: '฿',
 };
 
-export const SORT_FIELDS = ['created_at', 'updated_at', 'name', 'price'] as const;
-export const DEFAULT_SORT = 'created_at';
-export const DEFAULT_SORT_ORDER = 'desc';
+export const SORT_FIELDS = ['created_at', 'updated_at', 'name', 'price', 'last_used'] as const;
+
+/**
+ * The sort choices the user actually sees, in menu order.
+ *
+ * A single named preset per line, rather than a field plus a direction the
+ * user has to combine themselves: "longest unworn" is one idea, not
+ * "last_used, ascending". Each id doubles as its `sort.<id>` translation key.
+ */
+export const SORT_OPTIONS = [
+  { id: 'newest', field: 'created_at', order: 'desc' },
+  { id: 'longestUnused', field: 'last_used', order: 'asc' },
+  { id: 'recentlyUsed', field: 'last_used', order: 'desc' },
+  { id: 'nameAsc', field: 'name', order: 'asc' },
+  { id: 'nameDesc', field: 'name', order: 'desc' },
+  { id: 'priceAsc', field: 'price', order: 'asc' },
+  { id: 'priceDesc', field: 'price', order: 'desc' },
+] as const;
+
+export const DEFAULT_SORT_OPTION = 'newest';
 
 // ── Geometry ───────────────────────────────────────────────────────────────
 /** The atom. Every length in the app is an integer multiple of this. */
@@ -254,7 +271,8 @@ export const FONT_WEIGHT = {
 export const STORAGE_KEYS = {
   language: 'armoi.language',
   viewMode: 'armoi.viewMode',
-  sort: 'armoi.sort',
+  // Renamed with the shape change, so an old {sort, order} entry is ignored.
+  sortOption: 'armoi.sortOption',
   railOffset: 'armoi.railOffset',
 } as const;
 

@@ -48,11 +48,49 @@ engine: Engine = build_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, future=True)
 
 
-def init_db(target_engine: Engine | None = None) -> None:
-    """Create any missing tables. Armoi's schema is small enough to skip migrations."""
+def _add_missing_columns(target_engine: Engine) -> list[str]:
+    """Add columns the models declare but an existing table lacks.
+
+    Armoi is a single-user local app, so it carries no migration framework:
+    `create_all` builds the schema and this closes the one gap that leaves —
+    a column added to a model after the database already exists. Only
+    nullable columns (or ones with a server default) can be added this way;
+    anything else needs a real migration and is reported rather than guessed.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(target_engine)
+    added: list[str] = []
+
+    with target_engine.begin() as connection:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {column["name"] for column in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                if not column.nullable and column.server_default is None:
+                    raise RuntimeError(
+                        f"{table.name}.{column.name} is NOT NULL with no default; "
+                        "it cannot be added to an existing table automatically."
+                    )
+                ddl = column.type.compile(dialect=target_engine.dialect)
+                connection.execute(
+                    text(f"ALTER TABLE {table.name} ADD COLUMN {column.name} {ddl}")
+                )
+                added.append(f"{table.name}.{column.name}")
+
+    return added
+
+
+def init_db(target_engine: Engine | None = None) -> list[str]:
+    """Create any missing tables, then any missing columns on existing ones."""
     from app import models  # noqa: F401  (import registers the mappers)
 
-    Base.metadata.create_all(bind=target_engine or engine)
+    bind = target_engine or engine
+    Base.metadata.create_all(bind=bind)
+    return _add_missing_columns(bind)
 
 
 def get_session() -> Iterator[Session]:

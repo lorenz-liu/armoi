@@ -19,6 +19,7 @@ import {
   EmptyState,
   ErrorState,
   FilterSheet,
+  FloatingViewSwitcher,
   LibraryGrid,
   LibraryTitleBar,
   LibraryToolbar,
@@ -60,12 +61,14 @@ export function LibraryScreen({
   emptyAction,
 }: LibraryScreenProps) {
   const { t } = useI18n();
-  const { viewMode, setViewMode, sort, order, setSort } = usePreferences();
+  const { viewMode, setViewMode, sortOption, setSortOption } = usePreferences();
   const library = useLibrary(source);
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Measured rather than assumed: the toolbar's height depends on the type
   // scale and the safe area, and the rail must stay clear of it.
   const [toolbarHeight, setToolbarHeight] = useState(0);
+  // The switcher floats over the title bar, which must not run underneath it.
+  const [switcherWidth, setSwitcherWidth] = useState(0);
 
   const isFiltered = library.search.trim().length > 0 || library.activeFacetCount > 0;
 
@@ -92,13 +95,19 @@ export function LibraryScreen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {title || onBack ? (
-          <LibraryTitleBar title={title ?? ''} eyebrow={eyebrow} onBack={onBack} />
+          <LibraryTitleBar
+            title={title ?? ''}
+            eyebrow={eyebrow}
+            onBack={onBack}
+            reservedRight={switcherWidth}
+          />
         ) : null}
 
         <LibraryGrid
           items={library.items}
           mode={viewMode}
           onSelect={onSelectItem}
+          onMarkUsed={library.markUsed}
           onRefresh={library.refetch}
           refreshing={library.loading && !library.initialLoading}
           empty={empty}
@@ -109,11 +118,8 @@ export function LibraryScreen({
           count={library.total}
           search={library.search}
           onSearchChange={library.setSearch}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          sort={sort}
-          order={order}
-          onSortChange={setSort}
+          sortOption={sortOption}
+          onSortOptionChange={setSortOption}
           activeFilters={library.activeFacetCount}
           onOpenFilters={() => setFiltersOpen(true)}
           onAdd={onAdd}
@@ -126,6 +132,13 @@ export function LibraryScreen({
       {onOpenRail ? (
         <EdgeRail onSelect={onOpenRail} bottomObstruction={toolbarHeight} />
       ) : null}
+
+      {/* Last, so it floats above the grid, the rail and the title bar. */}
+      <FloatingViewSwitcher
+        value={viewMode}
+        onChange={setViewMode}
+        onLayout={(event) => setSwitcherWidth(event.nativeEvent.layout.width)}
+      />
 
       <FilterSheet
         visible={filtersOpen}

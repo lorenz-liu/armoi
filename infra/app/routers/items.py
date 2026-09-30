@@ -17,6 +17,7 @@ from app.schemas import (
     ItemUpdate,
     Page,
     PairingWrite,
+    UsageWrite,
 )
 from app.services import images as image_service
 from app.services import items as item_service
@@ -89,6 +90,21 @@ def delete_image(item_id: int, image_id: int, session: SessionDep) -> Response:
         raise HTTPException(NOT_FOUND, detail="Image not found on this item.")
     image_service.delete_image(session, image)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- usage ------------------------------------------------------------------
+@router.post("/{item_id}/use", response_model=ItemRead, summary="Record that it was worn")
+def mark_used(item_id: int, payload: UsageWrite, session: SessionDep) -> ItemRead:
+    item = item_service.get_item(session, item_id)
+    item_service.mark_used(session, item, payload.used_on)
+    return item_service.serialize_detail(session, item)
+
+
+@router.delete("/{item_id}/use", response_model=ItemRead, summary="Forget when it was worn")
+def clear_used(item_id: int, session: SessionDep) -> ItemRead:
+    item = item_service.get_item(session, item_id)
+    item_service.clear_used(session, item)
+    return item_service.serialize_detail(session, item)
 
 
 # --- pairings ---------------------------------------------------------------

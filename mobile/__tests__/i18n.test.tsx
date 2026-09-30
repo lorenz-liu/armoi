@@ -1,10 +1,15 @@
 /** Bilingual coverage, interpolation and category labelling. */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { CATEGORY_LIST } from '@/data/categories';
 import { DICTIONARIES, I18nProvider, useI18n } from '@/i18n';
+
+// The language switch test persists a choice; without this it would leak into
+// every later render through the provider's stored preference.
+beforeEach(() => AsyncStorage.clear());
 
 function flatten(node: unknown, prefix = ''): string[] {
   if (typeof node === 'string') return [prefix];
@@ -116,5 +121,41 @@ describe('useI18n', () => {
     expect(screen.getByTestId('save')).toHaveTextContent('保存');
     expect(screen.getByTestId('category')).toHaveTextContent('大衣');
     expect(screen.getByTestId('path')).toHaveTextContent('服装 · 外套 · 大衣');
+  });
+});
+
+describe('formatDate', () => {
+  function Dates() {
+    const { formatDate } = useI18n();
+    return (
+      <>
+        <Text testID="date-only">{formatDate('2026-09-30')}</Text>
+        <Text testID="timestamp">{formatDate('2026-09-30T12:00:00Z')}</Text>
+        <Text testID="garbage">{formatDate('not a date')}</Text>
+      </>
+    );
+  }
+
+  const setup = () =>
+    render(
+      <I18nProvider>
+        <Dates />
+      </I18nProvider>,
+    );
+
+  /** `new Date('2026-09-30')` is UTC midnight, which is the 29th west of Greenwich. */
+  it('reads a bare calendar date in local time, not UTC', async () => {
+    await setup();
+    expect(screen.getByTestId('date-only')).toHaveTextContent('Sep 30, 2026');
+  });
+
+  it('still handles a full timestamp', async () => {
+    await setup();
+    expect(screen.getByTestId('timestamp').props.children).toContain('2026');
+  });
+
+  it('passes an unparseable value straight through', async () => {
+    await setup();
+    expect(screen.getByTestId('garbage')).toHaveTextContent('not a date');
   });
 });

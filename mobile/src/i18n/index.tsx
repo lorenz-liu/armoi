@@ -43,6 +43,23 @@ function resolve(dictionary: unknown, path: string): string {
   return typeof value === 'string' ? value : path;
 }
 
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Parses either a timestamp or a bare calendar date.
+ *
+ * `new Date('2026-09-30')` is midnight *UTC*, which renders as the 29th for
+ * anyone west of Greenwich — so a date-only string is built in local time,
+ * where it belongs: "worn on the 30th" is a calendar fact, not an instant.
+ */
+function parseDate(iso: string): Date | null {
+  const dateOnly = DATE_ONLY.exec(iso);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function interpolate(template: string, params?: TranslateParams): string {
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
@@ -130,8 +147,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         }
       },
       formatDate: (iso) => {
-        const date = new Date(iso);
-        if (Number.isNaN(date.getTime())) return iso;
+        const date = parseDate(iso);
+        if (!date) return iso;
         return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en-US', {
           year: 'numeric',
           month: 'short',

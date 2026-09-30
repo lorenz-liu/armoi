@@ -37,12 +37,13 @@ export const en = {
 
   sort: {
     label: 'Sort',
-    created_at: 'Recently added',
-    updated_at: 'Recently updated',
-    name: 'Name',
-    price: 'Price',
-    asc: 'Ascending',
-    desc: 'Descending',
+    newest: 'Recently added',
+    longestUnused: 'Longest unworn',
+    recentlyUsed: 'Recently worn',
+    nameAsc: 'Name A–Z',
+    nameDesc: 'Name Z–A',
+    priceAsc: 'Price, low to high',
+    priceDesc: 'Price, high to low',
   },
 
   filter: {
@@ -60,6 +61,8 @@ export const en = {
     price: 'Price',
     anyCategory: 'Any category',
     anyCurrency: 'Any currency',
+    minPrice: 'Minimum price',
+    maxPrice: 'Maximum price',
   },
 
   item: {
@@ -96,6 +99,11 @@ export const en = {
     untitled: 'Untitled',
     noPrice: 'No price',
     createdAt: 'Added {date}',
+    useToday: 'Used today',
+    usedToday: 'Worn today',
+    lastUsed: 'Last worn',
+    neverUsed: 'Never worn',
+    clearUsed: 'Clear',
   },
 
   season: { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter' },
@@ -201,12 +209,13 @@ export const zh: Mirror<Dictionary> = {
 
   sort: {
     label: '排序',
-    created_at: '最近添加',
-    updated_at: '最近更新',
-    name: '名称',
-    price: '价格',
-    asc: '升序',
-    desc: '降序',
+    newest: '最新添加',
+    longestUnused: '最久没用',
+    recentlyUsed: '最近使用',
+    nameAsc: '名字 A-Z',
+    nameDesc: '名字 Z-A',
+    priceAsc: '价格升序',
+    priceDesc: '价格降序',
   },
 
   filter: {
@@ -224,6 +233,8 @@ export const zh: Mirror<Dictionary> = {
     price: '价格',
     anyCategory: '全部类别',
     anyCurrency: '全部货币',
+    minPrice: '最低价格',
+    maxPrice: '最高价格',
   },
 
   item: {
@@ -260,6 +271,11 @@ export const zh: Mirror<Dictionary> = {
     untitled: '未命名',
     noPrice: '未填价格',
     createdAt: '添加于 {date}',
+    useToday: '今日使用',
+    usedToday: '今天已用',
+    lastUsed: '最近使用',
+    neverUsed: '还没用过',
+    clearUsed: '清除',
   },
 
   season: { spring: '春', summer: '夏', autumn: '秋', winter: '冬' },

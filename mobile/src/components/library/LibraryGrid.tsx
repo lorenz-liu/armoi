@@ -25,6 +25,7 @@ export type LibraryGridProps = {
   items: ItemSummary[];
   mode: ViewMode;
   onSelect: (item: ItemSummary) => void;
+  onMarkUsed: (item: ItemSummary) => void;
   onRefresh: () => void;
   refreshing: boolean;
   empty?: React.ReactElement;
@@ -35,6 +36,7 @@ export function LibraryGrid({
   items,
   mode,
   onSelect,
+  onMarkUsed,
   onRefresh,
   refreshing,
   empty,
@@ -65,7 +67,7 @@ export function LibraryGrid({
       }}
       renderItem={({ item, index }) =>
         isList ? (
-          <ItemRow item={item} onPress={() => onSelect(item)} />
+          <ItemRow item={item} onPress={() => onSelect(item)} onMarkUsed={() => onMarkUsed(item)} />
         ) : (
           <ItemCard
             item={item}
@@ -73,6 +75,7 @@ export function LibraryGrid({
             width={isSingleColumn ? undefined : cellWidth}
             flipped={mode === 'big' && index % 2 === 1}
             onPress={() => onSelect(item)}
+            onMarkUsed={() => onMarkUsed(item)}
           />
         )
       }

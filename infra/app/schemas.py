@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Any, Literal
 
@@ -98,6 +98,8 @@ class ItemSummary(ORMModel):
     price_currency: Currency | None = None
     cover_image: ImageRead | None = None
     image_count: int = 0
+    #: Set by the "used today" action, never by a plain update.
+    last_used_date: date | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -161,6 +163,16 @@ class ItemUpdate(ItemWrite):
 
 class PairingWrite(BaseModel):
     item_id: int
+
+
+class UsageWrite(BaseModel):
+    """Marks an item as worn.
+
+    The client sends *its* calendar date, so "today" means the user's today
+    rather than the server's.
+    """
+
+    used_on: date | None = None
 
 
 # --- envelopes --------------------------------------------------------------

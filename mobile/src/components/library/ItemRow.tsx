@@ -10,10 +10,17 @@ import { Surface, Text, Touchable } from '../ui';
 
 import { ItemPhoto } from './ItemImage';
 import { SeasonDots } from './SeasonDots';
+import { UsageButton } from './UsageButton';
 
 const PADDING = space.xs;
 
-export function ItemRow({ item, onPress }: { item: ItemSummary; onPress: () => void }) {
+export type ItemRowProps = {
+  item: ItemSummary;
+  onPress: () => void;
+  onMarkUsed: () => void;
+};
+
+export function ItemRow({ item, onPress, onMarkUsed }: ItemRowProps) {
   const { t, formatPrice, tCategory } = useI18n();
 
   return (
@@ -49,11 +56,15 @@ export function ItemRow({ item, onPress }: { item: ItemSummary; onPress: () => v
             ) : null}
           </View>
         </View>
-        {item.price_amount ? (
-          <Text variant="price" tone="muted">
-            {formatPrice(item.price_amount, item.price_currency)}
-          </Text>
-        ) : null}
+        <View style={{ alignItems: 'flex-end', gap: space.xxs }}>
+          {item.price_amount ? (
+            <Text variant="price" tone="muted">
+              {formatPrice(item.price_amount, item.price_currency)}
+            </Text>
+          ) : null}
+          {/* A row has no space *under* the thumbnail, so it sits trailing. */}
+          <UsageButton lastUsedDate={item.last_used_date} onPress={onMarkUsed} />
+        </View>
       </Surface>
     </Touchable>
   );

@@ -36,6 +36,7 @@ function item(overrides: Partial<ItemSummary> = {}): ItemSummary {
     price_currency: 'EUR',
     cover_image: null,
     image_count: 0,
+    last_used_date: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     ...overrides,
@@ -70,6 +71,7 @@ function renderGrid(props: Partial<React.ComponentProps<typeof LibraryGrid>> = {
         items={[item(), item({ id: 2, name: 'Chelsea Boots', brand: 'Margiela' })]}
         mode="medium"
         onSelect={jest.fn()}
+        onMarkUsed={jest.fn()}
         onRefresh={jest.fn()}
         refreshing={false}
         {...props}
@@ -162,22 +164,25 @@ describe('LibraryToolbar', () => {
         count={3}
         search=""
         onSearchChange={jest.fn()}
-        viewMode="medium"
-        onViewModeChange={jest.fn()}
-        sort="created_at"
-        order="desc"
-        onSortChange={jest.fn()}
+        sortOption="newest"
+        onSortOptionChange={jest.fn()}
         activeFilters={0}
         onOpenFilters={jest.fn()}
         {...props}
       />,
     );
 
-  it('carries the search field and every control', async () => {
+  it('carries the search field, the sort dropdown and the filter', async () => {
     await toolbar();
     expect(screen.getByPlaceholderText('Search your library')).toBeTruthy();
+    expect(screen.getByLabelText('Sort')).toBeTruthy();
     expect(screen.getByLabelText('Filter')).toBeTruthy();
-    expect(screen.getByLabelText('Medium')).toBeTruthy();
+  });
+
+  /** Density is a way of looking, not a control that should cost a toolbar slot. */
+  it('leaves the view switcher out — it floats at the top right', async () => {
+    await toolbar();
+    expect(screen.queryByLabelText('Medium')).toBeNull();
   });
 
   /** Docked at the bottom, so it — not the list — owns the home-indicator area. */

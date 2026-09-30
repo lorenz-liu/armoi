@@ -29,7 +29,7 @@ a deployed server or a tunnel.
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # expo lint
-npm test            # 73 tests
+npm test            # 128 tests
 ```
 
 ## Layout
@@ -100,6 +100,13 @@ comfortably past the 44pt touch minimum.
 neutrals interpolated between them. The only chromatic notes are the four
 season dots and a single muted bronze for selection, all desaturated so they
 never compete with the photography.
+
+**Sorting is a menu of ideas, not axes.** Seven named orderings — recently
+added, longest unworn, recently worn, name A–Z / Z–A, price up / down — chosen
+from a dropdown, rather than a field the user must combine with a direction.
+
+**The view switcher floats.** Density is a way of *looking* at the library, so
+it sits at the top right above everything and never costs a row of layout.
 
 **Chrome at the bottom.** The search field and the control row dock at the
 bottom of the screen, inside thumb reach, leaving the whole upper screen to the

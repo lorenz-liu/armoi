@@ -14,45 +14,47 @@ import {
   type ReactNode,
 } from 'react';
 
-import type { SortField, SortOrder, ViewMode } from '@/api';
+import type { SortField, SortOptionId, SortOrder, ViewMode } from '@/api';
 import {
-  DEFAULT_SORT,
-  DEFAULT_SORT_ORDER,
+  DEFAULT_SORT_OPTION,
   DEFAULT_VIEW_MODE,
   RAIL,
-  SORT_FIELDS,
+  SORT_OPTIONS,
   STORAGE_KEYS,
   VIEW_MODES,
 } from '@/config';
 
+/** Resolves a menu choice to the field and direction the API expects. */
+export function resolveSort(option: SortOptionId): { sort: SortField; order: SortOrder } {
+  const match = SORT_OPTIONS.find((entry) => entry.id === option) ?? SORT_OPTIONS[0];
+  return { sort: match.field, order: match.order };
+}
+
 type Preferences = {
   viewMode: ViewMode;
+  sortOption: SortOptionId;
+  /** The resolved field and direction, for whoever builds the query. */
   sort: SortField;
   order: SortOrder;
   /** Distance from the bottom of the screen to the edge rail's centre. */
   railOffset: number;
   setViewMode: (mode: ViewMode) => void;
-  setSort: (sort: SortField, order: SortOrder) => void;
+  setSortOption: (option: SortOptionId) => void;
   setRailOffset: (offset: number) => void;
 };
 
 const PreferencesContext = createContext<Preferences | null>(null);
 
-type StoredSort = { sort: SortField; order: SortOrder };
-
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [viewMode, setViewModeState] = useState<ViewMode>(DEFAULT_VIEW_MODE);
-  const [{ sort, order }, setSortState] = useState<StoredSort>({
-    sort: DEFAULT_SORT,
-    order: DEFAULT_SORT_ORDER,
-  });
+  const [sortOption, setSortOptionState] = useState<SortOptionId>(DEFAULT_SORT_OPTION);
   const [railOffset, setRailOffsetState] = useState<number>(RAIL.defaultBottomInset);
 
   useEffect(() => {
     let cancelled = false;
     void AsyncStorage.multiGet([
       STORAGE_KEYS.viewMode,
-      STORAGE_KEYS.sort,
+      STORAGE_KEYS.sortOption,
       STORAGE_KEYS.railOffset,
     ]).then((entries) => {
       if (cancelled) return;
@@ -61,14 +63,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       if (mode && (VIEW_MODES as readonly string[]).includes(mode)) {
         setViewModeState(mode as ViewMode);
       }
-      const rawSort = stored[STORAGE_KEYS.sort];
-      if (rawSort) {
-        try {
-          const parsed = JSON.parse(rawSort) as StoredSort;
-          if ((SORT_FIELDS as readonly string[]).includes(parsed.sort)) setSortState(parsed);
-        } catch {
-          // a corrupt entry simply falls back to the defaults
-        }
+      const storedSort = stored[STORAGE_KEYS.sortOption];
+      if (storedSort && SORT_OPTIONS.some((entry) => entry.id === storedSort)) {
+        setSortOptionState(storedSort as SortOptionId);
       }
       const rawOffset = Number(stored[STORAGE_KEYS.railOffset]);
       // The rail re-clamps to the viewport, so any finite value is safe here.
@@ -84,10 +81,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(STORAGE_KEYS.viewMode, mode);
   }, []);
 
-  const setSort = useCallback((nextSort: SortField, nextOrder: SortOrder) => {
-    const next = { sort: nextSort, order: nextOrder };
-    setSortState(next);
-    void AsyncStorage.setItem(STORAGE_KEYS.sort, JSON.stringify(next));
+  const setSortOption = useCallback((option: SortOptionId) => {
+    setSortOptionState(option);
+    void AsyncStorage.setItem(STORAGE_KEYS.sortOption, option);
   }, []);
 
   const setRailOffset = useCallback((offset: number) => {
@@ -96,10 +92,19 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(STORAGE_KEYS.railOffset, String(rounded));
   }, []);
 
-  const value = useMemo(
-    () => ({ viewMode, sort, order, railOffset, setViewMode, setSort, setRailOffset }),
-    [viewMode, sort, order, railOffset, setViewMode, setSort, setRailOffset],
-  );
+  const value = useMemo(() => {
+    const { sort, order } = resolveSort(sortOption);
+    return {
+      viewMode,
+      sortOption,
+      sort,
+      order,
+      railOffset,
+      setViewMode,
+      setSortOption,
+      setRailOffset,
+    };
+  }, [viewMode, sortOption, railOffset, setViewMode, setSortOption, setRailOffset]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

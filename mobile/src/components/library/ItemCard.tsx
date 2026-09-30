@@ -16,6 +16,7 @@ import { Surface, Text, Touchable } from '../ui';
 
 import { ItemPhoto } from './ItemImage';
 import { SeasonDots } from './SeasonDots';
+import { UsageButton } from './UsageButton';
 
 /** Caption density per view mode — small cells cannot carry three lines. */
 const SHOWS_BRAND: Record<ViewMode, boolean> = { big: true, medium: true, small: false, list: true };
@@ -27,11 +28,19 @@ export type ItemCardProps = {
   /** Fixed cell width in multi-column modes; single-column cards fill the row. */
   width?: number;
   onPress: () => void;
+  onMarkUsed: () => void;
   /** Editorial stagger: alternating cards in `big` mode align to opposite edges. */
   flipped?: boolean;
 };
 
-export function ItemCard({ item, mode, width, onPress, flipped = false }: ItemCardProps) {
+export function ItemCard({
+  item,
+  mode,
+  width,
+  onPress,
+  onMarkUsed,
+  flipped = false,
+}: ItemCardProps) {
   const { t, formatPrice, tCategory } = useI18n();
   const padding = mode === 'small' ? space.xs : space.sm;
 
@@ -53,6 +62,7 @@ export function ItemCard({ item, mode, width, onPress, flipped = false }: ItemCa
           corner={radius.nest(radius.lg, padding)}
           placeholderIconSize={mode === 'small' ? 16 : 22}
         />
+        <UsageButton lastUsedDate={item.last_used_date} onPress={onMarkUsed} />
         <View
           style={{
             gap: space.xxs,

@@ -89,6 +89,12 @@ CURRENCIES: tuple[str, ...] = (
 )
 DEFAULT_CURRENCY: str = "CNY"
 
+# Sorting. The column each name maps to lives in services/items.py, which is
+# where the ORM is in scope; only the vocabulary is configuration.
+SORT_FIELDS: tuple[str, ...] = ("created_at", "updated_at", "name", "price", "last_used")
+DEFAULT_SORT: str = "created_at"
+DEFAULT_ORDER: str = "desc"
+
 # Pagination
 DEFAULT_PAGE_SIZE: int = 60
 MAX_PAGE_SIZE: int = 200

@@ -11,7 +11,7 @@
  */
 
 import { useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, type ViewStyle } from 'react-native';
 
 import { color, layout, radius, space } from '@/theme';
 
@@ -27,22 +27,65 @@ export type SelectOption<T extends string> = {
   caption?: string;
 };
 
+/**
+ * `field` is a bordered row; `compact` is a bare value + caret for sitting
+ * inside another field; `chip` is a capsule that sits among other chips.
+ */
+export type SelectVariant = 'field' | 'compact' | 'chip';
+
 export type SelectFieldProps<T extends string> = {
   value: T | null;
   options: readonly SelectOption<T>[];
   placeholder: string;
   onPress: () => void;
-  /** Renders as a bare value + caret, for sitting inside another field. */
-  compact?: boolean;
+  variant?: SelectVariant;
   accessibilityLabel: string;
 };
+
+const VARIANT_STYLE = {
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.xs,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: color.line,
+    backgroundColor: color.card,
+  },
+  compact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xxs,
+    paddingLeft: space.xs,
+    paddingVertical: space.xxs,
+    borderLeftWidth: 1,
+    borderLeftColor: color.line,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xxs,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: color.line,
+    backgroundColor: color.card,
+  },
+} as const satisfies Record<SelectVariant, ViewStyle>;
+
+const VARIANT_TEXT = { field: 'body', compact: 'bodyStrong', chip: 'caption' } as const;
+const VARIANT_CARET = { field: 16, compact: 14, chip: 14 } as const;
 
 export function SelectField<T extends string>({
   value,
   options,
   placeholder,
   onPress,
-  compact = false,
+  variant = 'field',
   accessibilityLabel,
 }: SelectFieldProps<T>) {
   const selected = options.find((option) => option.value === value);
@@ -53,39 +96,17 @@ export function SelectField<T extends string>({
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ text: selected?.label ?? placeholder }}
       onPress={onPress}
-      style={
-        compact
-          ? {
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: space.xxs,
-              paddingLeft: space.xs,
-              paddingVertical: space.xxs,
-              borderLeftWidth: 1,
-              borderLeftColor: color.line,
-            }
-          : {
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: space.xs,
-              paddingHorizontal: space.sm,
-              paddingVertical: space.sm,
-              borderRadius: radius.sm,
-              borderWidth: 1,
-              borderColor: color.line,
-              backgroundColor: color.card,
-            }
-      }
+      style={VARIANT_STYLE[variant]}
     >
       <Text
-        variant={compact ? 'bodyStrong' : 'body'}
+        variant={VARIANT_TEXT[variant]}
         tone={selected ? 'ink' : 'faint'}
         numberOfLines={1}
+        style={variant === 'field' ? { flex: 1 } : undefined}
       >
         {selected?.label ?? placeholder}
       </Text>
-      <Icon name="chevron-down" size={compact ? 14 : 16} color={color.inkFaint} />
+      <Icon name="chevron-down" size={VARIANT_CARET[variant]} color={color.inkFaint} />
     </Touchable>
   );
 }
@@ -148,7 +169,7 @@ export function SelectSheet<T extends string>({
 }
 
 export type SelectProps<T extends string> = Omit<SelectSheetProps<T>, 'visible' | 'onClose'> &
-  Pick<SelectFieldProps<T>, 'placeholder' | 'compact'> & {
+  Pick<SelectFieldProps<T>, 'placeholder' | 'variant'> & {
     accessibilityLabel?: string;
   };
 
@@ -158,7 +179,7 @@ export function Select<T extends string>({
   value,
   options,
   placeholder,
-  compact,
+  variant,
   accessibilityLabel,
   ...sheet
 }: SelectProps<T>) {
@@ -170,7 +191,7 @@ export function Select<T extends string>({
         value={value}
         options={options}
         placeholder={placeholder}
-        compact={compact}
+        variant={variant}
         accessibilityLabel={accessibilityLabel ?? title}
         onPress={() => setOpen(true)}
       />

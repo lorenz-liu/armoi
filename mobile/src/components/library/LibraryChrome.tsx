@@ -2,10 +2,11 @@
  * The chrome around a library surface, in two pieces.
  *
  * `LibraryToolbar` docks at the *bottom* of the screen: the search field with
- * the primary actions beside it, then one control row carrying sort, filter,
- * the item count and the view switcher. Putting it at the bottom keeps every
- * control inside thumb reach and leaves the top of the screen entirely to the
- * photographs.
+ * the primary actions beside it, then one control row carrying sort, filter
+ * and the item count. Putting it at the bottom keeps every control inside
+ * thumb reach and leaves the top of the screen entirely to the photographs.
+ * The view switcher is not here — it floats at the top right, see
+ * `FloatingViewSwitcher`.
  *
  * `LibraryTitleBar` stays at the top, and only appears where it says something
  * the user cannot already see — which brand, or which storage place. The main
@@ -18,20 +19,12 @@
 import { View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { SortField, SortOrder, ViewMode } from '@/api';
-import { SORT_FIELDS, VIEW_MODES } from '@/config';
+import type { SortOptionId } from '@/api';
+import { SORT_OPTIONS } from '@/config';
 import { useI18n } from '@/i18n';
 import { color, elevation, layout, space } from '@/theme';
 
-import { Chip, Icon, IconButton, SegmentedControl, Text, TextField, type Segment } from '../ui';
-
-/** One glyph per column count: 1 pane, 2 panes, 3-up grid, stacked rows. */
-const VIEW_ICONS = {
-  big: 'square',
-  medium: 'columns',
-  small: 'grid',
-  list: 'list',
-} as const satisfies Record<ViewMode, string>;
+import { Chip, Icon, IconButton, Select, Text, TextField, type SelectOption } from '../ui';
 
 export const LIBRARY_TOOLBAR_TEST_ID = 'library-toolbar';
 
@@ -40,9 +33,16 @@ export type LibraryTitleBarProps = {
   /** Rendered above the title — the brand/storage screens show the parent here. */
   eyebrow?: string;
   onBack?: () => void;
+  /** Width of the floating view switcher, which overlaps this row's right end. */
+  reservedRight?: number;
 };
 
-export function LibraryTitleBar({ title, eyebrow, onBack }: LibraryTitleBarProps) {
+export function LibraryTitleBar({
+  title,
+  eyebrow,
+  onBack,
+  reservedRight = 0,
+}: LibraryTitleBarProps) {
   const { t } = useI18n();
 
   return (
@@ -51,7 +51,8 @@ export function LibraryTitleBar({ title, eyebrow, onBack }: LibraryTitleBarProps
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.xs,
-        paddingHorizontal: layout.gutter,
+        paddingLeft: layout.gutter,
+        paddingRight: layout.gutter + reservedRight + space.xs,
         paddingBottom: space.xs,
       }}
     >
@@ -81,11 +82,8 @@ export type LibraryToolbarProps = {
   count: number;
   search: string;
   onSearchChange: (value: string) => void;
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-  sort: SortField;
-  order: SortOrder;
-  onSortChange: (sort: SortField, order: SortOrder) => void;
+  sortOption: SortOptionId;
+  onSortOptionChange: (option: SortOptionId) => void;
   activeFilters: number;
   onOpenFilters: () => void;
   /** Rendered beside the search field; omitted where the screen has no such action. */
@@ -98,11 +96,8 @@ export function LibraryToolbar({
   count,
   search,
   onSearchChange,
-  viewMode,
-  onViewModeChange,
-  sort,
-  order,
-  onSortChange,
+  sortOption,
+  onSortOptionChange,
   activeFilters,
   onOpenFilters,
   onAdd,
@@ -112,22 +107,10 @@ export function LibraryToolbar({
   const { t, plural } = useI18n();
   const insets = useSafeAreaInsets();
 
-  const viewSegments: Segment<ViewMode>[] = VIEW_MODES.map((mode) => ({
-    value: mode,
-    icon: VIEW_ICONS[mode],
-    accessibilityLabel: t(`view.${mode}`),
+  const sortOptions: SelectOption<SortOptionId>[] = SORT_OPTIONS.map((option) => ({
+    value: option.id,
+    label: t(`sort.${option.id}`),
   }));
-
-  /** Tapping the active sort field flips its direction; exhausting it selects the next. */
-  const cycleSort = () => {
-    if (order === 'desc') {
-      onSortChange(sort, 'asc');
-      return;
-    }
-    const index = SORT_FIELDS.indexOf(sort);
-    const next = SORT_FIELDS[(index + 1) % SORT_FIELDS.length] ?? SORT_FIELDS[0];
-    onSortChange(next, 'desc');
-  };
 
   return (
     <View
@@ -183,10 +166,15 @@ export function LibraryToolbar({
       </View>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
-        <Chip
-          label={`${t(`sort.${sort}`)} ${order === 'desc' ? '↓' : '↑'}`}
-          onPress={cycleSort}
-          accessibilityLabel={`${t('sort.label')}: ${t(`sort.${sort}`)} ${t(`sort.${order}`)}`}
+        <Select
+          variant="chip"
+          title={t('sort.label')}
+          accessibilityLabel={t('sort.label')}
+          value={sortOption}
+          options={sortOptions}
+          placeholder={t('sort.label')}
+          onChange={onSortOptionChange}
+          closeLabel={t('common.close')}
         />
         <Chip
           label={activeFilters > 0 ? plural('filter.active', activeFilters) : t('filter.label')}
@@ -197,7 +185,6 @@ export function LibraryToolbar({
         <Text variant="micro" tone="faint" numberOfLines={1}>
           {plural('library.count', count)}
         </Text>
-        <SegmentedControl segments={viewSegments} value={viewMode} onChange={onViewModeChange} />
       </View>
     </View>
   );

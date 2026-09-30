@@ -342,7 +342,7 @@ export default function ItemFormRoute() {
               // The unit belongs to the amount, so it lives inside the field.
               trailing={
                 <Select
-                  compact
+                  variant="compact"
                   title={t('item.currency')}
                   accessibilityLabel={t('item.currency')}
                   value={draft.price_currency ?? DEFAULT_CURRENCY}

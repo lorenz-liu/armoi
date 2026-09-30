@@ -20,6 +20,14 @@ import type {
 export * from './types';
 export { ApiError, mediaUrl } from './client';
 
+/** Today in the device's own timezone, as an ISO date. */
+export function localToday(now: Date = new Date()): string {
+  // toISOString() would convert to UTC and can land on the wrong day.
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 /** Strips empty facets so the URL carries only real constraints. */
 function queryParams(query: ItemQuery): Record<string, unknown> {
   const params: Record<string, unknown> = {};
@@ -54,6 +62,11 @@ export const items = {
   reorderImages: (id: number, imageIds: number[]) =>
     json.put<ItemImage[]>(`/items/${id}/images/order`, { image_ids: imageIds }),
   removeImage: (id: number, imageId: number) => json.delete(`/items/${id}/images/${imageId}`),
+
+  /** Records that the piece was worn; sends the phone's own calendar date. */
+  markUsed: (id: number, usedOn: string = localToday()) =>
+    json.post<Item>(`/items/${id}/use`, { used_on: usedOn }),
+  clearUsed: (id: number) => json.delete(`/items/${id}/use`),
 
   pairings: (id: number) => json.get<ItemSummary[]>(`/items/${id}/pairings`),
   addPairing: (id: number, partnerId: number) =>

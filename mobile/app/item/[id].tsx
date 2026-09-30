@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { Alert, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, type ItemSummary } from '@/api';
+import { api, localToday, type ItemSummary } from '@/api';
 import {
   Button,
   ErrorState,
@@ -22,6 +22,7 @@ import {
   Surface,
   Text,
   Touchable,
+  UsageButton,
 } from '@/components';
 import { useAsync } from '@/hooks/useAsync';
 import { useI18n } from '@/i18n';
@@ -42,6 +43,16 @@ export default function ItemDetailRoute() {
 
   const state = useAsync(useCallback(() => api.items.read(itemId), [itemId]), [itemId]);
   const item = state.data;
+
+  const markUsed = async () => {
+    const saved = await api.items.markUsed(itemId, localToday());
+    state.setData(() => saved);
+  };
+
+  const clearUsed = async () => {
+    await api.items.clearUsed(itemId);
+    await state.refetch();
+  };
 
   const confirmDelete = () => {
     Alert.alert(t('item.deleteConfirmTitle'), t('item.deleteConfirmBody'), [
@@ -149,6 +160,27 @@ export default function ItemDetailRoute() {
               </Text>
               <SeasonDots seasons={item.seasons} />
             </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space.sm,
+                marginTop: space.xs,
+              }}
+            >
+              <UsageButton lastUsedDate={item.last_used_date} onPress={markUsed} />
+              {item.last_used_date ? (
+                <Touchable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('item.clearUsed')}
+                  onPress={clearUsed}
+                >
+                  <Text variant="caption" tone="faint">
+                    {t('item.clearUsed')}
+                  </Text>
+                </Touchable>
+              ) : null}
+            </View>
           </View>
 
           <Surface corner="lg" level="raised" style={{ padding: space.md, gap: space.sm }}>
@@ -171,6 +203,12 @@ export default function ItemDetailRoute() {
                 value={item.seasons.map((season) => t(`season.${season}`)).join(' · ')}
               />
             ) : null}
+            <Row
+              label={t('item.lastUsed')}
+              value={
+                item.last_used_date ? formatDate(item.last_used_date) : t('item.neverUsed')
+              }
+            />
             <Row label={t('item.createdAt', { date: '' }).trim()} value={formatDate(item.created_at)} />
           </Surface>
 

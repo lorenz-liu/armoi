@@ -12,6 +12,8 @@ price — then browse the collection as a lookbook rather than a spreadsheet.
   gender, a three-level category, and an optional price with a currency.
 - **Pairings** — mark two pieces as worn together; the relation is mutual, so
   it shows on both.
+- **Wear tracking** — one tap records that a piece was worn today, and the
+  library can be sorted by longest unworn or most recently worn.
 - **Libraries that grow themselves** — typing a new brand or storage place adds
   it to its library and offers it back as prefix autocomplete next time.
 - **One browsing surface** — search across every textual field, filter by any
@@ -55,7 +57,7 @@ URLs. Override with `EXPO_PUBLIC_API_BASE_URL` only to point elsewhere.
 | `make dev` | Backend and Expo dev server together. |
 | `make api` / `make app` | Just one side. |
 | `make db reset` | Delete the database and uploaded images (asks first). |
-| `make test` | Both suites — 72 backend, 73 mobile. |
+| `make test` | Both suites — 83 backend, 128 mobile. |
 | `make lint` | ruff, then tsc and eslint. |
 | `make categories` | Regenerate the category tree from `TODO.md`. |
 | `make install` | Dependencies and `.env` files only. |

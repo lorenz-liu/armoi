@@ -5,7 +5,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import type { Currency, Gender, ItemQuery, ItemSummary, Page, Season } from '@/api';
+import { api, localToday, type Currency, type Gender, type ItemQuery, type ItemSummary, type Page, type Season } from '@/api';
 import { MOTION } from '@/config';
 
 import { useAsync } from './useAsync';
@@ -78,6 +78,37 @@ export function useLibrary(source: LibrarySource, hiddenFacets: Partial<Facets> 
 
   const clearFacets = useCallback(() => setFacets(EMPTY_FACETS), []);
 
+  const { setData, refetch } = state;
+
+  /**
+   * Records that a piece was worn, patching the row in place first so the tap
+   * feels immediate. The list is deliberately *not* re-sorted: under a
+   * "recently worn" ordering the card would leap out from under the finger.
+   * The next refresh puts it where it belongs.
+   */
+  const markUsed = useCallback(
+    async (item: ItemSummary) => {
+      const usedOn = localToday();
+      if (item.last_used_date === usedOn) return;
+
+      setData((page) =>
+        page && {
+          ...page,
+          items: page.items.map((entry) =>
+            entry.id === item.id ? { ...entry, last_used_date: usedOn } : entry,
+          ),
+        },
+      );
+      try {
+        await api.items.markUsed(item.id, usedOn);
+      } catch {
+        // The optimistic patch was a guess; the server is the record.
+        await refetch();
+      }
+    },
+    [setData, refetch],
+  );
+
   return {
     search,
     setSearch,
@@ -87,6 +118,7 @@ export function useLibrary(source: LibrarySource, hiddenFacets: Partial<Facets> 
     /** Facets that the screen itself fixes (a brand page pins the brand). */
     hiddenFacets,
     activeFacetCount: countActiveFacets(facets),
+    markUsed,
     items: state.data?.items ?? [],
     total: state.data?.total ?? 0,
     ...state,

@@ -1,12 +1,20 @@
 /** Wire types — mirror of `infra/app/schemas.py`. */
 
-import type { CURRENCIES, GENDERS, SEASONS, SORT_FIELDS, VIEW_MODES } from '@/config';
+import type {
+  CURRENCIES,
+  GENDERS,
+  SEASONS,
+  SORT_FIELDS,
+  SORT_OPTIONS,
+  VIEW_MODES,
+} from '@/config';
 
 export type Season = (typeof SEASONS)[number];
 export type Gender = (typeof GENDERS)[number];
 export type Currency = (typeof CURRENCIES)[number];
 export type SortField = (typeof SORT_FIELDS)[number];
 export type SortOrder = 'asc' | 'desc';
+export type SortOptionId = (typeof SORT_OPTIONS)[number]['id'];
 export type ViewMode = (typeof VIEW_MODES)[number];
 
 export type ItemImage = {
@@ -31,6 +39,8 @@ export type ItemSummary = {
   price_currency: Currency | null;
   cover_image: ItemImage | null;
   image_count: number;
+  /** ISO date, or null if it has never been worn. */
+  last_used_date: string | null;
   created_at: string;
   updated_at: string;
 };

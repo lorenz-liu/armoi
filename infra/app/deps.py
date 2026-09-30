@@ -7,9 +7,15 @@ from typing import Annotated
 from fastapi import Depends, Query
 from sqlalchemy.orm import Session
 
-from app.config import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+from app.config import (
+    DEFAULT_ORDER,
+    DEFAULT_PAGE_SIZE,
+    DEFAULT_SORT,
+    MAX_PAGE_SIZE,
+    SORT_FIELDS,
+)
 from app.db import get_session
-from app.services.items import DEFAULT_ORDER, DEFAULT_SORT, SORT_FIELDS, ItemFilters
+from app.services.items import ItemFilters
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
