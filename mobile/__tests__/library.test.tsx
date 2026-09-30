@@ -5,15 +5,21 @@ import type { TestInstance } from 'test-renderer';
 import type { ViewStyle } from 'react-native';
 
 import type { ItemSummary, Page } from '@/api';
-import { LIBRARY_GRID_TEST_ID, LibraryGrid, LibraryHeader } from '@/components';
+import {
+  LIBRARY_GRID_TEST_ID,
+  LIBRARY_TOOLBAR_TEST_ID,
+  LibraryGrid,
+  LibraryTitleBar,
+  LibraryToolbar,
+} from '@/components';
 import { VIEW_MODES } from '@/config';
 import { LibraryScreen } from '@/features/LibraryScreen';
-import { layout } from '@/theme';
+import { layout, space } from '@/theme';
 
 const emptyPage: Page<ItemSummary> = { items: [], total: 0, limit: 40, offset: 0 };
 import { EMPTY_FACETS, countActiveFacets } from '@/hooks/useLibrary';
 
-import { renderWithProviders, screen, userEvent } from '../test-utils/render';
+import { TEST_METRICS, renderWithProviders, screen, userEvent } from '../test-utils/render';
 
 function item(overrides: Partial<ItemSummary> = {}): ItemSummary {
   return {
@@ -128,6 +134,14 @@ describe('layout stability across view modes', () => {
     expect(isInsideGrid(screen.getByPlaceholderText('Search your library'))).toBe(false);
   });
 
+  it('shows the main library no title, leaving the top to the photographs', async () => {
+    await renderWithProviders(
+      <LibraryScreen source={async () => emptyPage} onSelectItem={jest.fn()} />,
+    );
+    expect(screen.queryByText('Library')).toBeNull();
+    expect(screen.getByTestId(LIBRARY_TOOLBAR_TEST_ID)).toBeTruthy();
+  });
+
   it('keeps the controls in place when the view mode changes', async () => {
     await renderWithProviders(
       <LibraryScreen source={async () => emptyPage} onSelectItem={jest.fn()} />,
@@ -141,10 +155,10 @@ describe('layout stability across view modes', () => {
   });
 });
 
-describe('LibraryHeader', () => {
-  const header = (props: Partial<React.ComponentProps<typeof LibraryHeader>> = {}) =>
+describe('LibraryToolbar', () => {
+  const toolbar = (props: Partial<React.ComponentProps<typeof LibraryToolbar>> = {}) =>
     renderWithProviders(
-      <LibraryHeader
+      <LibraryToolbar
         count={3}
         search=""
         onSearchChange={jest.fn()}
@@ -159,19 +173,47 @@ describe('LibraryHeader', () => {
       />,
     );
 
-  it('shows no title on the main library, which needs no caption', async () => {
-    await header();
-    expect(screen.queryByText('Library')).toBeNull();
+  it('carries the search field and every control', async () => {
+    await toolbar();
     expect(screen.getByPlaceholderText('Search your library')).toBeTruthy();
+    expect(screen.getByLabelText('Filter')).toBeTruthy();
+    expect(screen.getByLabelText('Medium')).toBeTruthy();
   });
 
-  it('shows the title where it identifies a brand or a place', async () => {
-    await header({ title: 'Totême', eyebrow: 'Brands', onBack: jest.fn() });
-    expect(screen.getByText('Totême')).toBeTruthy();
+  /** Docked at the bottom, so it — not the list — owns the home-indicator area. */
+  it('absorbs the bottom safe-area inset', async () => {
+    await toolbar();
+    const style = screen.getByTestId(LIBRARY_TOOLBAR_TEST_ID).props.style as ViewStyle[];
+    const padding = style.flat().find((entry) => entry?.paddingBottom !== undefined);
+    expect(padding?.paddingBottom).toBe(TEST_METRICS.insets.bottom + space.sm);
   });
 
   it('keeps the item count visible without spending a row on it', async () => {
-    await header();
+    await toolbar();
     expect(screen.getByText('3 pieces')).toBeTruthy();
+  });
+
+  it('shows the add and settings actions only where the screen offers them', async () => {
+    await toolbar();
+    expect(screen.queryByLabelText('Add piece')).toBeNull();
+    expect(screen.queryByLabelText('Settings')).toBeNull();
+
+    const onAdd = jest.fn();
+    await toolbar({ onAdd, onOpenSettings: jest.fn() });
+    await userEvent.press(screen.getByLabelText('Add piece'));
+    expect(onAdd).toHaveBeenCalled();
+    expect(screen.getByLabelText('Settings')).toBeTruthy();
+  });
+});
+
+describe('LibraryTitleBar', () => {
+  it('names a brand or a place, and offers the way back', async () => {
+    const onBack = jest.fn();
+    await renderWithProviders(
+      <LibraryTitleBar title="Totême" eyebrow="Brands" onBack={onBack} />,
+    );
+    expect(screen.getByText('Totême')).toBeTruthy();
+    await userEvent.press(screen.getByLabelText('Back'));
+    expect(onBack).toHaveBeenCalled();
   });
 });

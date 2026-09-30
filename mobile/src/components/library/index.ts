@@ -1,9 +1,20 @@
 export { AutocompleteField } from './AutocompleteField';
 export { CategoryPicker } from './CategoryPicker';
-export { EDGE_RAIL_TEST_ID, EdgeRail, clampRailCentre, type RailTab } from './EdgeRail';
+export {
+  EDGE_RAIL_TEST_ID,
+  EdgeRail,
+  clampRailCentre,
+  type EdgeRailProps,
+  type RailTab,
+} from './EdgeRail';
 export { FilterSheet } from './FilterSheet';
 export { GridSpacer, LibraryGrid, LIBRARY_GRID_TEST_ID } from './LibraryGrid';
-export { LibraryHeader } from './LibraryHeader';
+export {
+  LIBRARY_TOOLBAR_TEST_ID,
+  LibraryTitleBar,
+  LibraryToolbar,
+  type LibraryToolbarProps,
+} from './LibraryChrome';
 export { PairingPicker } from './PairingPicker';
 export { PhotoStrip } from './PhotoStrip';
 export { ItemCard } from './ItemCard';

@@ -101,6 +101,14 @@ neutrals interpolated between them. The only chromatic notes are the four
 season dots and a single muted bronze for selection, all desaturated so they
 never compete with the photography.
 
+**Chrome at the bottom.** The search field and the control row dock at the
+bottom of the screen, inside thumb reach, leaving the whole upper screen to the
+photographs. The dock is real layout rather than a floating overlay, so it owns
+the bottom safe area and cannot drift when the column count changes; a
+`KeyboardAvoidingView` lifts it clear of the keyboard. A title bar appears at
+the top only on the brand and storage pages, where it names what you are
+looking at.
+
 **Editorial asymmetry.** In the one-up view alternate cards flip their caption
 alignment, which gives a single column the staggered rhythm of a magazine
 spread without breaking the grid.

@@ -64,7 +64,17 @@ export function clampRailCentre({
   return Math.min(Math.max(offset, lowest), highest);
 }
 
-export function EdgeRail({ onSelect }: { onSelect: (tab: RailTab) => void }) {
+export type EdgeRailProps = {
+  onSelect: (tab: RailTab) => void;
+  /**
+   * Height of any chrome docked at the bottom of the screen. The rail is
+   * positioned in screen coordinates, so without this it could be dragged
+   * down behind the toolbar.
+   */
+  bottomObstruction?: number;
+};
+
+export function EdgeRail({ onSelect, bottomObstruction = 0 }: EdgeRailProps) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const { height: viewportHeight } = useWindowDimensions();
@@ -76,10 +86,12 @@ export function EdgeRail({ onSelect }: { onSelect: (tab: RailTab) => void }) {
     const bounds = {
       viewportHeight,
       topInset: insets.top,
-      bottomInset: insets.bottom,
+      // The toolbar already spans the home-indicator area, so take whichever
+      // reaches further up the screen.
+      bottomInset: Math.max(insets.bottom, bottomObstruction),
     };
     return (offset: number) => clampRailCentre({ offset, ...bounds });
-  }, [insets.bottom, insets.top, viewportHeight]);
+  }, [insets.bottom, insets.top, viewportHeight, bottomObstruction]);
 
   // The resting position is derived, never stored twice: it is whatever the
   // preference says, clamped to the current viewport. A drag moves only the
