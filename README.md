@@ -32,8 +32,7 @@ price — then browse the collection as a lookbook rather than a spreadsheet.
 armoi/
 ├── infra/     FastAPI + SQLAlchemy + SQLite  →  infra/README.md
 ├── mobile/    Expo + React Native + TypeScript  →  mobile/README.md
-├── icon.jpg   app icon
-└── TODO.md    the original specification
+└── icon.jpg   app icon
 ```
 
 ## Quick start
