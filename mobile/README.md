@@ -29,7 +29,7 @@ a deployed server or a tunnel.
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # expo lint
-npm test            # 152 tests
+npm test            # 162 tests
 ```
 
 ## Layout
@@ -40,6 +40,7 @@ npm test            # 152 tests
 | `src/theme/` | Tokens *derived* from config — spacing, radii, type scale, grid solver. |
 | `src/i18n/` | `en`/`zh` dictionaries, typed dot-path `t()`, category labels, formatting. |
 | `src/api/` | Typed endpoint bindings over a fetch client with timeout + retry. |
+| `src/api/index.ts` | Also builds multipart parts for uploads — see the note below. |
 | `src/hooks/` | `useAsync`, `useDebounced`, `usePreferences`, `useLibrary`. |
 | `src/components/ui/` | Primitives: Text, Surface, Button, Chip, TextField, Sheet… |
 | `src/components/library/` | Domain components: cards, grid, header, pickers, the edge rail. |
@@ -59,6 +60,20 @@ npm test            # 152 tests
 /storages/[id]        everything in one place
 /settings             language, default view, counters, server status
 ```
+
+## Uploading photos
+
+From SDK 54 Expo replaces the global `fetch`, and its multipart serialiser
+accepts a part only as a string, a `Blob`, or an object exposing `bytes()`. It
+rejects React Native's classic `{uri, name, type}` part outright with
+*Unsupported FormDataPart implementation*. Parts are therefore built from
+`expo-file-system`'s `File`, which implements `Blob` and carries the name and
+mime type the backend needs; the picker's own mime type is used as a fallback,
+since the file system reports an empty one when it cannot sniff the format.
+
+`__tests__/upload.test.ts` runs the parts through Expo's real converter, and
+asserts the old shape still fails — the two together are what stop this
+regressing.
 
 ## The design system
 

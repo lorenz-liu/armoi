@@ -1,5 +1,7 @@
 /** Endpoint bindings, one function per backend route. */
 
+import { File } from 'expo-file-system';
+
 import { LIMITS } from '@/config';
 
 import { json, upload } from './client';
@@ -19,6 +21,44 @@ import type {
 
 export * from './types';
 export { ApiError, mediaUrl } from './client';
+
+/**
+ * The shape a multipart file part must have.
+ *
+ * Expo's `fetch` (which replaces the global one from SDK 54) serialises a
+ * part from `name`, `type` and `bytes()`. It deliberately does *not* accept
+ * React Native's classic `{uri, name, type}` part — passing one fails with
+ * "Unsupported FormDataPart implementation".
+ */
+export type UploadPart = {
+  name: string;
+  type: string;
+  bytes: () => Promise<Uint8Array>;
+};
+
+/**
+ * Reconciles the file on disk with what the picker told us.
+ *
+ * The file system reports an empty mime type when it cannot sniff one, and
+ * the backend rejects a part with no content type — so the picker's value
+ * wins whenever the file's own is missing.
+ */
+export function reconcileUploadPart(file: UploadPart, image: LocalImage): UploadPart {
+  if (file.name && file.type) return file;
+  return {
+    name: file.name || image.fileName,
+    type: file.type || image.mimeType,
+    bytes: () => file.bytes(),
+  };
+}
+
+/** The multipart parts for a set of picked photos, in order. */
+export function imageUploadParts(images: LocalImage[]): UploadPart[] {
+  return images.map((image) =>
+    // `File` implements Blob and exposes bytes(), which is what Expo's fetch wants.
+    reconcileUploadPart(new File(image.uri) as unknown as UploadPart, image),
+  );
+}
 
 /** Today in the device's own timezone, as an ISO date. */
 export function localToday(now: Date = new Date()): string {
@@ -49,13 +89,9 @@ export const items = {
 
   uploadImages: (id: number, images: LocalImage[]) => {
     const form = new FormData();
-    for (const image of images) {
-      // React Native's FormData takes this {uri,name,type} shape, not a Blob.
-      form.append('files', {
-        uri: image.uri,
-        name: image.fileName,
-        type: image.mimeType,
-      } as unknown as Blob);
+    for (const part of imageUploadParts(images)) {
+      // The DOM typing insists on a Blob; Expo's serialiser wants `bytes()`.
+      form.append('files', part as unknown as Blob);
     }
     return upload<ItemImage[]>(`/items/${id}/images`, form);
   },

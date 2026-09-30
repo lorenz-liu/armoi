@@ -59,7 +59,7 @@ URLs. Override with `EXPO_PUBLIC_API_BASE_URL` only to point elsewhere.
 | `make dev` | Backend and Expo dev server together. |
 | `make api` / `make app` | Just one side. |
 | `make db reset` | Delete the database and uploaded images (asks first). |
-| `make test` | Both suites — 83 backend, 152 mobile. |
+| `make test` | Both suites — 83 backend, 162 mobile. |
 | `make lint` | ruff, then tsc and eslint. |
 | `make categories` | Regenerate the category tree from `TODO.md`. |
 | `make install` | Dependencies and `.env` files only. |

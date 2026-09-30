@@ -92,6 +92,10 @@ export default function ItemFormRoute() {
   const [loading, setLoading] = useState(itemId !== null);
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState<string>();
+  // Set once the record exists, so a failure *after* creation (a photo that
+  // would not upload, say) leaves a retry updating that row rather than
+  // creating a second one.
+  const [createdId, setCreatedId] = useState<number | null>(null);
   const [sheet, setSheet] = useState<'none' | 'category' | 'pairings'>('none');
 
   useEffect(() => {
@@ -155,27 +159,36 @@ export default function ItemFormRoute() {
         // A currency with no amount is meaningless; the backend drops it anyway.
         price_currency: draft.price_amount ? (draft.price_currency ?? DEFAULT_CURRENCY) : null,
       };
-      const saved = itemId === null
-        ? await api.items.create(payload)
-        : await api.items.update(itemId, payload);
+      const target = itemId ?? createdId;
+      const saved =
+        target === null ? await api.items.create(payload) : await api.items.update(target, payload);
+      setCreatedId(saved.id);
 
+      // Each step clears its own pending work, so a retry never repeats one
+      // that already succeeded.
       for (const imageId of removedImageIds) {
         await api.items.removeImage(saved.id, imageId);
       }
+      setRemovedImageIds([]);
+
       const keptIds = images.map((image) => image.id);
-      if (keptIds.length > 0 && itemId !== null) {
+      if (keptIds.length > 0) {
         await api.items.reorderImages(saved.id, keptIds);
       }
       if (pending.length > 0) {
         await api.items.uploadImages(saved.id, pending);
+        setPending([]);
       }
 
       router.back();
       if (itemId === null) router.push(`/item/${saved.id}`);
     } catch (error) {
+      const detail = error instanceof ApiError ? error.detail : t('errors.generic');
       Alert.alert(
         t('common.error'),
-        error instanceof ApiError ? error.detail : t('errors.generic'),
+        // The record is already saved at this point; say so, or the user will
+        // reasonably assume nothing was and start again.
+        createdId === null && itemId === null ? detail : `${t('errors.savedButPhotos')}\n\n${detail}`,
       );
     } finally {
       setSaving(false);

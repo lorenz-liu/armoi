@@ -168,6 +168,7 @@ export const en = {
   errors: {
     nameRequired: 'A name is required.',
     imageLimit: 'An item holds at most {max} photos.',
+    savedButPhotos: 'The piece is saved. Something went wrong with the rest — try again.',
     generic: 'Something went wrong. Please try again.',
   },
 } as const;
@@ -342,6 +343,7 @@ export const zh: Mirror<Dictionary> = {
   errors: {
     nameRequired: '请填写名称。',
     imageLimit: '每件单品最多 {max} 张图片。',
+    savedButPhotos: '单品已保存，其余部分出了问题，请重试。',
     generic: '出了点问题，请重试。',
   },
 };
