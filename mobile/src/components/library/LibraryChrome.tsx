@@ -35,6 +35,7 @@ export type LibraryTitleBarProps = {
   onBack?: () => void;
   /** Width of the floating view switcher, which overlaps this row's right end. */
   reservedRight?: number;
+  onLayout?: (event: LayoutChangeEvent) => void;
 };
 
 export function LibraryTitleBar({
@@ -42,11 +43,13 @@ export function LibraryTitleBar({
   eyebrow,
   onBack,
   reservedRight = 0,
+  onLayout,
 }: LibraryTitleBarProps) {
   const { t } = useI18n();
 
   return (
     <View
+      onLayout={onLayout}
       style={{
         flexDirection: 'row',
         alignItems: 'center',

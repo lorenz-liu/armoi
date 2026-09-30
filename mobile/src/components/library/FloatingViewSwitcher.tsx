@@ -26,6 +26,24 @@ const VIEW_ICONS = {
 
 const PADDING = 2;
 
+/** Gap above the switcher, and again below it before content resumes. */
+const CLEARANCE = space.xs;
+
+export const FLOATING_VIEW_SWITCHER_TEST_ID = 'floating-view-switcher';
+
+/**
+ * Vertical space the grid must leave at the top so its first row clears the
+ * switcher instead of sliding under it when scrolled to the very top.
+ *
+ * Both arguments are measured from the top of the screen's content box: the
+ * switcher is inset by `CLEARANCE`, and a title bar (when the screen has one)
+ * already pushes the grid down by its own height.
+ */
+export function floatingSwitcherReserve(switcherHeight: number, titleBarHeight = 0): number {
+  if (switcherHeight <= 0) return 0;
+  return Math.max(0, CLEARANCE + switcherHeight + CLEARANCE - titleBarHeight);
+}
+
 export type FloatingViewSwitcherProps = {
   value: ViewMode;
   onChange: (mode: ViewMode) => void;
@@ -44,11 +62,12 @@ export function FloatingViewSwitcher({ value, onChange, onLayout }: FloatingView
 
   return (
     <View
+      testID={FLOATING_VIEW_SWITCHER_TEST_ID}
       onLayout={onLayout}
       style={[
         {
           position: 'absolute',
-          top: insets.top + space.xs,
+          top: insets.top + CLEARANCE,
           right: layout.gutter,
           padding: PADDING,
           // Opaque, because it sits over photographs.

@@ -6,11 +6,13 @@ import type { ViewStyle } from 'react-native';
 
 import type { ItemSummary, Page } from '@/api';
 import {
+  FLOATING_VIEW_SWITCHER_TEST_ID,
   LIBRARY_GRID_TEST_ID,
   LIBRARY_TOOLBAR_TEST_ID,
   LibraryGrid,
   LibraryTitleBar,
   LibraryToolbar,
+  floatingSwitcherReserve,
 } from '@/components';
 import { VIEW_MODES } from '@/config';
 import { LibraryScreen } from '@/features/LibraryScreen';
@@ -19,7 +21,14 @@ import { layout, space } from '@/theme';
 const emptyPage: Page<ItemSummary> = { items: [], total: 0, limit: 40, offset: 0 };
 import { EMPTY_FACETS, countActiveFacets } from '@/hooks/useLibrary';
 
-import { TEST_METRICS, renderWithProviders, screen, userEvent } from '../test-utils/render';
+import {
+  TEST_METRICS,
+  fireEvent,
+  renderWithProviders,
+  screen,
+  userEvent,
+  waitFor,
+} from '../test-utils/render';
 
 function item(overrides: Partial<ItemSummary> = {}): ItemSummary {
   return {
@@ -220,5 +229,58 @@ describe('LibraryTitleBar', () => {
     expect(screen.getByText('Totême')).toBeTruthy();
     await userEvent.press(screen.getByLabelText('Back'));
     expect(onBack).toHaveBeenCalled();
+  });
+});
+
+describe('room for the floating view switcher', () => {
+  const SWITCHER_HEIGHT = 36;
+  const CLEARANCE = space.xs;
+
+  describe('floatingSwitcherReserve', () => {
+    it('leaves the switcher clear above and below', () => {
+      expect(floatingSwitcherReserve(SWITCHER_HEIGHT)).toBe(
+        CLEARANCE + SWITCHER_HEIGHT + CLEARANCE,
+      );
+    });
+
+    it('asks for nothing before the switcher has been measured', () => {
+      expect(floatingSwitcherReserve(0)).toBe(0);
+    });
+
+    it('counts a title bar as room already made', () => {
+      expect(floatingSwitcherReserve(SWITCHER_HEIGHT, 20)).toBe(
+        CLEARANCE + SWITCHER_HEIGHT + CLEARANCE - 20,
+      );
+    });
+
+    it('never asks for negative space when the title bar is taller', () => {
+      expect(floatingSwitcherReserve(SWITCHER_HEIGHT, 500)).toBe(0);
+    });
+  });
+
+  /** The reported bug: at the very top, row one sat underneath the switcher. */
+  it('starts the first row below the switcher, not under it', async () => {
+    await renderWithProviders(
+      <LibraryScreen source={async () => emptyPage} onSelectItem={jest.fn()} />,
+    );
+
+    fireEvent(screen.getByTestId(FLOATING_VIEW_SWITCHER_TEST_ID), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 140, height: SWITCHER_HEIGHT } },
+    });
+
+    await waitFor(() => {
+      const style = screen.getByTestId(LIBRARY_GRID_TEST_ID).props
+        .contentContainerStyle as ViewStyle;
+      expect(style.paddingTop).toBeGreaterThanOrEqual(CLEARANCE + SWITCHER_HEIGHT);
+    });
+  });
+
+  it('keeps the ordinary top padding until the switcher reports a size', async () => {
+    await renderWithProviders(
+      <LibraryScreen source={async () => emptyPage} onSelectItem={jest.fn()} />,
+    );
+    const style = screen.getByTestId(LIBRARY_GRID_TEST_ID).props
+      .contentContainerStyle as ViewStyle;
+    expect(style.paddingTop).toBe(space.sm);
   });
 });

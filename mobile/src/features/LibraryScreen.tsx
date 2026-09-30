@@ -20,6 +20,7 @@ import {
   ErrorState,
   FilterSheet,
   FloatingViewSwitcher,
+  floatingSwitcherReserve,
   LibraryGrid,
   LibraryTitleBar,
   LibraryToolbar,
@@ -67,8 +68,11 @@ export function LibraryScreen({
   // Measured rather than assumed: the toolbar's height depends on the type
   // scale and the safe area, and the rail must stay clear of it.
   const [toolbarHeight, setToolbarHeight] = useState(0);
-  // The switcher floats over the title bar, which must not run underneath it.
-  const [switcherWidth, setSwitcherWidth] = useState(0);
+  // The switcher floats over the top of the screen. Its size decides two
+  // things: how far the title bar must keep clear horizontally, and how much
+  // room the grid leaves before its first row.
+  const [switcher, setSwitcher] = useState({ width: 0, height: 0 });
+  const [titleBarHeight, setTitleBarHeight] = useState(0);
 
   const isFiltered = library.search.trim().length > 0 || library.activeFacetCount > 0;
 
@@ -99,7 +103,8 @@ export function LibraryScreen({
             title={title ?? ''}
             eyebrow={eyebrow}
             onBack={onBack}
-            reservedRight={switcherWidth}
+            reservedRight={switcher.width}
+            onLayout={(event) => setTitleBarHeight(event.nativeEvent.layout.height)}
           />
         ) : null}
 
@@ -111,6 +116,7 @@ export function LibraryScreen({
           onRefresh={library.refetch}
           refreshing={library.loading && !library.initialLoading}
           empty={empty}
+          topInset={floatingSwitcherReserve(switcher.height, titleBarHeight)}
         />
 
         <LibraryToolbar
@@ -137,7 +143,12 @@ export function LibraryScreen({
       <FloatingViewSwitcher
         value={viewMode}
         onChange={setViewMode}
-        onLayout={(event) => setSwitcherWidth(event.nativeEvent.layout.width)}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          setSwitcher((current) =>
+            current.width === width && current.height === height ? current : { width, height },
+          );
+        }}
       />
 
       <FilterSheet

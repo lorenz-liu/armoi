@@ -8,7 +8,11 @@ export {
   type RailTab,
 } from './EdgeRail';
 export { FilterSheet } from './FilterSheet';
-export { FloatingViewSwitcher } from './FloatingViewSwitcher';
+export {
+  FLOATING_VIEW_SWITCHER_TEST_ID,
+  FloatingViewSwitcher,
+  floatingSwitcherReserve,
+} from './FloatingViewSwitcher';
 export { GridSpacer, LibraryGrid, LIBRARY_GRID_TEST_ID } from './LibraryGrid';
 export {
   LIBRARY_TOOLBAR_TEST_ID,

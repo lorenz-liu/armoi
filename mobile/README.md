@@ -29,7 +29,7 @@ a deployed server or a tunnel.
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # expo lint
-npm test            # 128 tests
+npm test            # 134 tests
 ```
 
 ## Layout
@@ -106,7 +106,10 @@ added, longest unworn, recently worn, name A–Z / Z–A, price up / down — ch
 from a dropdown, rather than a field the user must combine with a direction.
 
 **The view switcher floats.** Density is a way of *looking* at the library, so
-it sits at the top right above everything and never costs a row of layout.
+it sits at the top right above everything and never costs a row of layout. The
+grid reserves its measured height at the top, so scrolled to the very top the
+first row sits *below* it — content may pass under floating chrome while
+scrolling, but it should never begin underneath it.
 
 **Chrome at the bottom.** The search field and the control row dock at the
 bottom of the screen, inside thumb reach, leaving the whole upper screen to the

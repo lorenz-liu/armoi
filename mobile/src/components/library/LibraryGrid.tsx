@@ -8,6 +8,9 @@
  * margins. The header is deliberately *not* a `ListHeaderComponent`: changing
  * `numColumns` forces a remount, which would make the search field and
  * controls jump as the view mode changed.
+ *
+ * `topInset` keeps the first row clear of the floating view switcher: content
+ * may scroll *under* floating chrome, but it should never start beneath it.
  */
 
 import { FlatList, RefreshControl, View, useWindowDimensions } from 'react-native';
@@ -29,6 +32,8 @@ export type LibraryGridProps = {
   onRefresh: () => void;
   refreshing: boolean;
   empty?: React.ReactElement;
+  /** Room left at the top for floating chrome, so row one is not underneath it. */
+  topInset?: number;
   footerInset?: number;
 };
 
@@ -40,6 +45,7 @@ export function LibraryGrid({
   onRefresh,
   refreshing,
   empty,
+  topInset = 0,
   footerInset = 0,
 }: LibraryGridProps) {
   const { width } = useWindowDimensions();
@@ -61,7 +67,7 @@ export function LibraryGrid({
       contentContainerStyle={{
         // Identical in every mode — this is what keeps the page from shifting.
         paddingHorizontal: layout.gutter,
-        paddingTop: space.sm,
+        paddingTop: Math.max(space.sm, topInset),
         paddingBottom: footerInset + space.xxl,
         gap: isList ? layout.listGap : layout.gap,
       }}
