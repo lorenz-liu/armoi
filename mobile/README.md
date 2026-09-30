@@ -29,7 +29,7 @@ a deployed server or a tunnel.
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # expo lint
-npm test            # 162 tests
+npm test            # 168 tests
 ```
 
 ## Layout

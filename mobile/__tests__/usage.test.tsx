@@ -6,8 +6,10 @@ import {
   LIBRARY_TOOLBAR_TEST_ID,
   LibraryToolbar,
   UsageButton,
+  usageButtonHeight,
 } from '@/components';
 import { SORT_OPTIONS } from '@/config';
+import { color, layout } from '@/theme';
 import { LibraryScreen } from '@/features/LibraryScreen';
 
 import { renderWithProviders, screen, userEvent, waitFor } from '../test-utils/render';
@@ -171,5 +173,56 @@ describe('FloatingViewSwitcher', () => {
     for (let node = switcher.parent; node; node = node.parent) {
       expect(node.props?.testID).not.toBe(LIBRARY_TOOLBAR_TEST_ID);
     }
+  });
+});
+
+describe('the item page button', () => {
+  /** Returns the resolved style of the rendered pressable. */
+  function styleOf(label: string): Record<string, unknown> {
+    const raw = screen.getByLabelText(label).props.style as unknown;
+    return Object.assign({}, ...[raw].flat(Infinity).filter(Boolean));
+  }
+
+  it('fills the width, unlike the one on a library cell', async () => {
+    await renderWithProviders(
+      <UsageButton variant="prominent" lastUsedDate={null} onPress={jest.fn()} />,
+    );
+    expect(styleOf('Used today').alignSelf).toBe('stretch');
+  });
+
+  it('is black, as the page-level action', async () => {
+    await renderWithProviders(
+      <UsageButton variant="prominent" lastUsedDate={null} onPress={jest.fn()} />,
+    );
+    expect(styleOf('Used today').backgroundColor).toBe(color.ink);
+  });
+
+  it('stands a good deal taller than the compact one', () => {
+    expect(usageButtonHeight('prominent')).toBeGreaterThan(usageButtonHeight('compact'));
+    expect(usageButtonHeight('compact')).toBeGreaterThanOrEqual(layout.touchTarget);
+  });
+
+  it('renders at the height it declares', async () => {
+    await renderWithProviders(
+      <UsageButton variant="prominent" lastUsedDate={null} onPress={jest.fn()} />,
+    );
+    expect(styleOf('Used today').minHeight).toBe(usageButtonHeight('prominent'));
+  });
+
+  it('settles once worn, rather than staying a live black button', async () => {
+    const onPress = jest.fn();
+    await renderWithProviders(
+      <UsageButton variant="prominent" lastUsedDate={localToday()} onPress={onPress} />,
+    );
+    expect(styleOf('Worn today').backgroundColor).toBe(color.accentSoft);
+    await userEvent.press(screen.getByLabelText('Worn today'));
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
+  it('leaves the library cell button compact', async () => {
+    await renderWithProviders(<UsageButton lastUsedDate={null} onPress={jest.fn()} />);
+    const style = styleOf('Used today');
+    expect(style.alignSelf).not.toBe('stretch');
+    expect(style.backgroundColor).toBe(color.card);
   });
 });

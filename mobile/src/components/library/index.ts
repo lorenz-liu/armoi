@@ -26,4 +26,4 @@ export { ItemCard } from './ItemCard';
 export { ItemPhoto } from './ItemImage';
 export { ItemRow } from './ItemRow';
 export { SeasonDots } from './SeasonDots';
-export { UsageButton } from './UsageButton';
+export { USAGE_BUTTON_METRICS, UsageButton, usageButtonHeight } from './UsageButton';

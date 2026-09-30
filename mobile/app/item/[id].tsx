@@ -160,20 +160,18 @@ export default function ItemDetailRoute() {
               </Text>
               <SeasonDots seasons={item.seasons} />
             </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: space.sm,
-                marginTop: space.xs,
-              }}
-            >
-              <UsageButton lastUsedDate={item.last_used_date} onPress={markUsed} />
+            <View style={{ gap: space.xs, marginTop: space.sm }}>
+              <UsageButton
+                variant="prominent"
+                lastUsedDate={item.last_used_date}
+                onPress={markUsed}
+              />
               {item.last_used_date ? (
                 <Touchable
                   accessibilityRole="button"
                   accessibilityLabel={t('item.clearUsed')}
                   onPress={clearUsed}
+                  style={{ alignSelf: 'center', paddingVertical: space.xxs }}
                 >
                   <Text variant="caption" tone="faint">
                     {t('item.clearUsed')}
