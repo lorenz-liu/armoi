@@ -1,0 +1,40 @@
+# fly.toml app configuration file generated for Armoi
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+
+app = 'armoi-api'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[deploy]
+  release_command = 'alembic upgrade head'
+
+[env]
+  ARMOI_ENV = 'prod'
+  ARMOI_HOST = '0.0.0.0'
+  ARMOI_PORT = '8080'
+  ARMOI_DEBUG = 'false'
+  ARMOI_MEDIA_BACKEND = 's3'
+  ARMOI_CORS_ORIGINS = '*'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [[http_service.checks]]
+    interval = '15s'
+    timeout = '2s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1

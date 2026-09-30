@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.db import init_db
-from app.routers import catalog, items
+from app.routers import auth, catalog, items
 from app.routers.vocabularies import brands_router, storages_router
 from app.services.images import media_dir
 
@@ -18,7 +18,8 @@ from app.services.images import media_dir
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
-    media_dir()
+    if not settings.is_s3_media:
+        media_dir()
     yield
 
 
@@ -38,16 +39,18 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.include_router(auth.router, prefix=settings.api_prefix)
     app.include_router(items.router, prefix=settings.api_prefix)
     app.include_router(brands_router, prefix=settings.api_prefix)
     app.include_router(storages_router, prefix=settings.api_prefix)
     app.include_router(catalog.router, prefix=settings.api_prefix)
 
-    app.mount(
-        settings.media_url_path,
-        StaticFiles(directory=media_dir(), check_dir=False),
-        name="media",
-    )
+    if not settings.is_s3_media:
+        app.mount(
+            settings.media_url_path,
+            StaticFiles(directory=media_dir(), check_dir=False),
+            name="media",
+        )
 
     @app.get("/health", tags=["meta"])
     def health() -> dict[str, str]:

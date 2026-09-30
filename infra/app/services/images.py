@@ -1,9 +1,9 @@
-"""Item image storage: validation, on-disk persistence, ordering."""
+"""Item image storage: validation, persistence via MediaStorage, ordering."""
 
 from __future__ import annotations
 
+import io
 import uuid
-from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -17,26 +17,30 @@ from app.config import (
 )
 from app.errors import BAD_REQUEST, CONFLICT, CONTENT_TOO_LARGE, UNSUPPORTED_MEDIA_TYPE
 from app.models import Item, ItemImage
+from app.services.storage import get_storage, reset_storage_cache
 
 
-def media_dir() -> Path:
+def media_dir():
+    """Ensure the local media directory exists (no-op for S3)."""
+    if settings.is_s3_media:
+        return settings.resolved_media_dir
     path = settings.resolved_media_dir
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def image_url(filename: str) -> str:
-    return f"{settings.media_url_path}/{filename}"
+    return get_storage().url(filename)
 
 
-def _probe_dimensions(path: Path) -> tuple[int | None, int | None]:
-    """Best-effort size read; unsupported formats (HEIC without a plugin) return None."""
+def _probe_dimensions(payload: bytes) -> tuple[int | None, int | None]:
+    """Best-effort size read; unsupported formats return None."""
     try:
-        from PIL import Image  # imported lazily so the API boots without image work
+        from PIL import Image
 
-        with Image.open(path) as img:
+        with Image.open(io.BytesIO(payload)) as img:
             return img.width, img.height
-    except Exception:  # noqa: BLE001 - dimensions are cosmetic; any decode failure is fine
+    except Exception:  # noqa: BLE001 - dimensions are cosmetic
         return None, None
 
 
@@ -54,9 +58,10 @@ def add_images(session: Session, item: Item, uploads: list[UploadFile]) -> list[
             ),
         )
 
+    storage = get_storage()
     next_position = max((img.position for img in item.images), default=-1) + 1
     created: list[ItemImage] = []
-    written: list[Path] = []
+    written: list[str] = []
 
     try:
         for upload in uploads:
@@ -75,12 +80,14 @@ def add_images(session: Session, item: Item, uploads: list[UploadFile]) -> list[
             if not payload:
                 raise HTTPException(BAD_REQUEST, detail="Empty image upload.")
 
-            filename = f"{uuid.uuid4().hex}{IMAGE_EXTENSION_BY_CONTENT_TYPE[content_type]}"
-            destination = media_dir() / filename
-            destination.write_bytes(payload)
-            written.append(destination)
+            filename = (
+                f"u{item.user_id}/{item.id}/"
+                f"{uuid.uuid4().hex}{IMAGE_EXTENSION_BY_CONTENT_TYPE[content_type]}"
+            )
+            storage.put(filename, payload, content_type)
+            written.append(filename)
 
-            width, height = _probe_dimensions(destination)
+            width, height = _probe_dimensions(payload)
             image = ItemImage(
                 item_id=item.id,
                 filename=filename,
@@ -92,9 +99,8 @@ def add_images(session: Session, item: Item, uploads: list[UploadFile]) -> list[
             session.add(image)
             created.append(image)
     except Exception:
-        # Never leave orphan bytes behind when a later file in the batch fails.
-        for path in written:
-            path.unlink(missing_ok=True)
+        for key in written:
+            storage.delete(key)
         raise
 
     session.flush()
@@ -103,15 +109,16 @@ def add_images(session: Session, item: Item, uploads: list[UploadFile]) -> list[
 
 
 def delete_image(session: Session, image: ItemImage) -> None:
-    (media_dir() / image.filename).unlink(missing_ok=True)
+    get_storage().delete(image.filename)
     session.delete(image)
     session.flush()
 
 
 def delete_images_for_item(session: Session, item: Item) -> None:
     """Remove the files; the rows go with the item via ON DELETE CASCADE."""
+    storage = get_storage()
     for image in list(item.images):
-        (media_dir() / image.filename).unlink(missing_ok=True)
+        storage.delete(image.filename)
 
 
 def reorder(session: Session, item: Item, image_ids: list[int]) -> list[ItemImage]:
@@ -131,3 +138,14 @@ def reorder(session: Session, item: Item, image_ids: list[int]) -> list[ItemImag
     session.flush()
     session.refresh(item)
     return item.images
+
+
+__all__ = [
+    "add_images",
+    "delete_image",
+    "delete_images_for_item",
+    "image_url",
+    "media_dir",
+    "reorder",
+    "reset_storage_cache",
+]

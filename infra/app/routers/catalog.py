@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from app.categories_data import CATEGORY_LIST, CATEGORY_TREE
 from app.config import CURRENCIES, DEFAULT_CURRENCY, GENDERS, MAX_IMAGES_PER_ITEM, SEASONS
-from app.deps import SessionDep
+from app.deps import CurrentUser, SessionDep
 from app.models import Brand, Item, ItemImage, ItemPairing, Storage
 from app.schemas import CategoryNode, LibraryStats
 
@@ -54,14 +54,29 @@ def meta() -> Meta:
 
 
 @router.get("/stats", response_model=LibraryStats, summary="Library counters")
-def stats(session: SessionDep) -> LibraryStats:
-    def count(model) -> int:
-        return session.scalar(select(func.count()).select_from(model)) or 0
-
+def stats(session: SessionDep, user: CurrentUser) -> LibraryStats:
+    item_ids = select(Item.id).where(Item.user_id == user.id)
     return LibraryStats(
-        item_count=count(Item),
-        brand_count=count(Brand),
-        storage_count=count(Storage),
-        image_count=count(ItemImage),
-        pairing_count=count(ItemPairing),
+        item_count=session.scalar(
+            select(func.count()).select_from(Item).where(Item.user_id == user.id)
+        )
+        or 0,
+        brand_count=session.scalar(
+            select(func.count()).select_from(Brand).where(Brand.user_id == user.id)
+        )
+        or 0,
+        storage_count=session.scalar(
+            select(func.count()).select_from(Storage).where(Storage.user_id == user.id)
+        )
+        or 0,
+        image_count=session.scalar(
+            select(func.count()).select_from(ItemImage).where(ItemImage.item_id.in_(item_ids))
+        )
+        or 0,
+        pairing_count=session.scalar(
+            select(func.count())
+            .select_from(ItemPairing)
+            .where(ItemPairing.item_a_id.in_(item_ids))
+        )
+        or 0,
     )

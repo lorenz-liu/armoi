@@ -1,14 +1,43 @@
-/** Root layout: providers, the shared stack, and the paper-coloured chrome. */
+/** Root layout: providers and auth-aware stack. */
 
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { MOTION } from '@/config';
+import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { PreferencesProvider } from '@/hooks/usePreferences';
 import { I18nProvider } from '@/i18n';
 import { color } from '@/theme';
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, ready } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!ready) return;
+    const inAuthGroup = segments[0] === '(auth)';
+    if (!user && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (user && inAuthGroup) {
+      router.replace('/(app)');
+    }
+  }, [user, ready, segments, router]);
+
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: color.paper }}>
+        <ActivityIndicator color={color.ink} />
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
 
 export default function RootLayout() {
   return (
@@ -16,19 +45,21 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <I18nProvider>
           <PreferencesProvider>
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: color.paper },
-                animationDuration: MOTION.normal,
-              }}
-            >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="item/[id]" />
-              <Stack.Screen name="item/edit" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-            </Stack>
+            <AuthProvider>
+              <StatusBar style="dark" />
+              <AuthGate>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: color.paper },
+                    animationDuration: MOTION.normal,
+                  }}
+                >
+                  <Stack.Screen name="(auth)/login" />
+                  <Stack.Screen name="(app)" />
+                </Stack>
+              </AuthGate>
+            </AuthProvider>
           </PreferencesProvider>
         </I18nProvider>
       </SafeAreaProvider>

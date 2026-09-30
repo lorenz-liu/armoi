@@ -144,6 +144,18 @@ export const en = {
     connectionFail: 'Cannot reach the server',
     about: 'About',
     version: 'Version {version}',
+    account: 'Account',
+    signedIn: 'Signed in',
+    signedInVia: 'Via {provider}',
+  },
+
+  auth: {
+    tagline: 'Your wardrobe, catalogued — and private to you.',
+    continueGoogle: 'Continue with Google',
+    continueApple: 'Continue with Apple',
+    signOut: 'Sign out',
+    notConfigured: 'Sign-in is not configured. Add OAuth client IDs to the app env.',
+    privacy: 'Armoi never posts on your behalf. Your library stays yours.',
   },
 
   common: {
@@ -319,6 +331,18 @@ export const zh: Mirror<Dictionary> = {
     connectionFail: '无法连接服务器',
     about: '关于',
     version: '版本 {version}',
+    account: '账号',
+    signedIn: '已登录',
+    signedInVia: '通过 {provider}',
+  },
+
+  auth: {
+    tagline: '你的衣橱，只属于你。',
+    continueGoogle: '使用 Google 继续',
+    continueApple: '使用 Apple 继续',
+    signOut: '退出登录',
+    notConfigured: '尚未配置登录。请在应用环境变量中填入 OAuth Client ID。',
+    privacy: 'Armoi 不会代表你发帖。你的衣橱只属于你。',
   },
 
   common: {

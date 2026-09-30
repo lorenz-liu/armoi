@@ -1,7 +1,8 @@
 """Item queries, mutations and serialization.
 
 Everything the library screens need — search, filters, sorting, paging — is
-expressed once here so the main, brand and storage screens share it.
+expressed once here so the main, brand and storage screens share it. Every
+query is scoped to the owning user.
 """
 
 from __future__ import annotations
@@ -63,8 +64,10 @@ class ItemFilters:
 
 
 # --- lookups ----------------------------------------------------------------
-def get_item(session: Session, item_id: int) -> Item:
-    item = session.get(Item, item_id)
+def get_item(session: Session, item_id: int, *, user_id: int) -> Item:
+    item = session.scalar(
+        select(Item).where(Item.id == item_id, Item.user_id == user_id)
+    )
     if item is None:
         raise HTTPException(NOT_FOUND, detail=f"Item {item_id} not found.")
     return item
@@ -101,8 +104,8 @@ def _search_clause(term: str):
     return or_(*clauses)
 
 
-def build_query(filters: ItemFilters) -> Select:
-    stmt = select(Item)
+def build_query(filters: ItemFilters, *, user_id: int) -> Select:
+    stmt = select(Item).where(Item.user_id == user_id)
 
     if filters.search and filters.search.strip():
         stmt = stmt.where(_search_clause(filters.search))
@@ -142,14 +145,16 @@ def build_query(filters: ItemFilters) -> Select:
     return stmt.order_by(direction, Item.id.desc())
 
 
-def count_items(session: Session, filters: ItemFilters) -> int:
-    subquery = build_query(filters).order_by(None).subquery()
+def count_items(session: Session, filters: ItemFilters, *, user_id: int) -> int:
+    subquery = build_query(filters, user_id=user_id).order_by(None).subquery()
     return session.scalar(select(func.count()).select_from(subquery)) or 0
 
 
-def list_items(session: Session, filters: ItemFilters) -> tuple[list[Item], int]:
-    total = count_items(session, filters)
-    stmt = build_query(filters).limit(filters.limit).offset(filters.offset)
+def list_items(
+    session: Session, filters: ItemFilters, *, user_id: int
+) -> tuple[list[Item], int]:
+    total = count_items(session, filters, user_id=user_id)
+    stmt = build_query(filters, user_id=user_id).limit(filters.limit).offset(filters.offset)
     return list(session.scalars(stmt).unique().all()), total
 
 
@@ -167,19 +172,29 @@ def pairing_ids_for(session: Session, item_id: int) -> list[int]:
     return [b if a == item_id else a for a, b in rows]
 
 
-def paired_items(session: Session, item_id: int) -> list[Item]:
+def paired_items(session: Session, item_id: int, *, user_id: int) -> list[Item]:
     ids = pairing_ids_for(session, item_id)
     if not ids:
         return []
-    stmt = select(Item).where(Item.id.in_(ids)).order_by(Item.name)
+    stmt = (
+        select(Item)
+        .where(Item.id.in_(ids), Item.user_id == user_id)
+        .order_by(Item.name)
+    )
     return list(session.scalars(stmt).unique().all())
 
 
-def set_pairings(session: Session, item: Item, partner_ids: Iterable[int]) -> None:
+def set_pairings(
+    session: Session, item: Item, partner_ids: Iterable[int], *, user_id: int
+) -> None:
     """Replace the item's pairing set. Edges are symmetric by construction."""
     wanted = {pid for pid in partner_ids if pid != item.id}
     if wanted:
-        found = set(session.scalars(select(Item.id).where(Item.id.in_(wanted))).all())
+        found = set(
+            session.scalars(
+                select(Item.id).where(Item.id.in_(wanted), Item.user_id == user_id)
+            ).all()
+        )
         missing = wanted - found
         if missing:
             raise HTTPException(
@@ -196,12 +211,22 @@ def set_pairings(session: Session, item: Item, partner_ids: Iterable[int]) -> No
     session.flush()
 
 
-def add_pairing(session: Session, item: Item, partner_id: int) -> None:
-    set_pairings(session, item, set(pairing_ids_for(session, item.id)) | {partner_id})
+def add_pairing(session: Session, item: Item, partner_id: int, *, user_id: int) -> None:
+    set_pairings(
+        session,
+        item,
+        set(pairing_ids_for(session, item.id)) | {partner_id},
+        user_id=user_id,
+    )
 
 
-def remove_pairing(session: Session, item: Item, partner_id: int) -> None:
-    set_pairings(session, item, set(pairing_ids_for(session, item.id)) - {partner_id})
+def remove_pairing(session: Session, item: Item, partner_id: int, *, user_id: int) -> None:
+    set_pairings(
+        session,
+        item,
+        set(pairing_ids_for(session, item.id)) - {partner_id},
+        user_id=user_id,
+    )
 
 
 # --- mutations --------------------------------------------------------------
@@ -212,10 +237,14 @@ def _apply_seasons(session: Session, item: Item, seasons: Sequence[str]) -> None
     session.flush()
 
 
-def _apply_scalars(session: Session, item: Item, payload: ItemWrite) -> None:
+def _apply_scalars(
+    session: Session, item: Item, payload: ItemWrite, *, user_id: int
+) -> None:
     item.name = payload.name.strip()
-    item.brand = vocabulary.get_or_create(session, Brand, payload.brand)
-    item.storage = vocabulary.get_or_create(session, Storage, payload.storage)
+    item.brand = vocabulary.get_or_create(session, Brand, payload.brand, user_id=user_id)
+    item.storage = vocabulary.get_or_create(
+        session, Storage, payload.storage, user_id=user_id
+    )
     item.category_id = validate_category(payload.category_id)
     item.gender = payload.gender
     item.price_amount = payload.price_amount
@@ -224,21 +253,23 @@ def _apply_scalars(session: Session, item: Item, payload: ItemWrite) -> None:
     item.notes = payload.notes
 
 
-def create_item(session: Session, payload: ItemWrite) -> Item:
-    item = Item(name=payload.name.strip())
+def create_item(session: Session, payload: ItemWrite, *, user_id: int) -> Item:
+    item = Item(name=payload.name.strip(), user_id=user_id)
     session.add(item)
-    _apply_scalars(session, item, payload)
+    _apply_scalars(session, item, payload, user_id=user_id)
     session.flush()
     _apply_seasons(session, item, payload.seasons)
-    set_pairings(session, item, payload.pairing_ids)
+    set_pairings(session, item, payload.pairing_ids, user_id=user_id)
     session.refresh(item)
     return item
 
 
-def update_item(session: Session, item: Item, payload: ItemWrite) -> Item:
-    _apply_scalars(session, item, payload)
+def update_item(
+    session: Session, item: Item, payload: ItemWrite, *, user_id: int
+) -> Item:
+    _apply_scalars(session, item, payload, user_id=user_id)
     _apply_seasons(session, item, payload.seasons)
-    set_pairings(session, item, payload.pairing_ids)
+    set_pairings(session, item, payload.pairing_ids, user_id=user_id)
     session.flush()
     session.refresh(item)
     return item
@@ -307,5 +338,8 @@ def serialize_detail(session: Session, item: Item) -> ItemRead:
         **summary.model_dump(),
         notes=item.notes,
         images=[serialize_image(image) for image in item.images],
-        pairings=[serialize_summary(partner) for partner in paired_items(session, item.id)],
+        pairings=[
+            serialize_summary(partner)
+            for partner in paired_items(session, item.id, user_id=item.user_id)
+        ],
     )

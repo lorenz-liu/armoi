@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     app_name: str = "Armoi"
     api_version: str = "0.1.0"
     api_prefix: str = "/api/v1"
+    # ``dev`` enables the test-only auth bypass; ``prod`` is Fly / production.
+    env: str = "dev"
 
     host: str = "0.0.0.0"
     port: int = 8000
@@ -36,8 +38,29 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/armoi.db"
     media_dir: str = "./media"
     media_url_path: str = "/media"
+    # ``local`` writes to media_dir; ``s3`` uses Tigris / any S3-compatible store.
+    media_backend: str = "local"
 
     cors_origins: str = "*"
+
+    # Auth — JWT issued after verifying a Google / Apple ID token.
+    jwt_secret: str = "dev-only-change-me"
+    jwt_access_ttl_seconds: int = 60 * 60  # 1 hour
+    jwt_refresh_ttl_seconds: int = 60 * 60 * 24 * 30  # 30 days
+    # Comma-separated OAuth client IDs accepted as `aud` on Google ID tokens
+    # (iOS, Android, and optionally a web client).
+    google_client_ids: str = ""
+    # Apple bundle id / Services ID accepted as `aud` on Apple ID tokens.
+    apple_client_id: str = ""
+
+    # Tigris / S3-compatible object storage (used when media_backend=s3).
+    s3_endpoint_url: str = ""
+    s3_region: str = "auto"
+    s3_bucket: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_public_base_url: str = ""
+    s3_presign_ttl_seconds: int = 60 * 60
 
     # --- derived helpers ---------------------------------------------------
     @property
@@ -59,6 +82,18 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def google_client_id_list(self) -> list[str]:
+        return [c.strip() for c in self.google_client_ids.split(",") if c.strip()]
+
+    @property
+    def is_s3_media(self) -> bool:
+        return self.media_backend.strip().lower() == "s3"
+
+    @property
+    def is_dev(self) -> bool:
+        return self.env.strip().lower() == "dev"
 
 
 settings = Settings()
@@ -107,3 +142,11 @@ MAX_NOTES_LENGTH: int = 2000
 AUTOCOMPLETE_LIMIT: int = 12
 
 CATEGORY_PATH_SEPARATOR: str = "."
+
+AUTH_PROVIDERS: tuple[str, ...] = ("google", "apple")
+APPLE_JWKS_URL: str = "https://appleid.apple.com/auth/keys"
+GOOGLE_JWKS_URL: str = "https://www.googleapis.com/oauth2/v3/certs"
+GOOGLE_ISSUERS: frozenset[str] = frozenset(
+    {"https://accounts.google.com", "accounts.google.com"}
+)
+APPLE_ISSUER: str = "https://appleid.apple.com"
