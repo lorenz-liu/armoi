@@ -1,4 +1,7 @@
-/** View mode and sort order, persisted so the library opens as you left it. */
+/**
+ * View mode, sort order and the rail's position — persisted so the library
+ * opens exactly as you left it.
+ */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -16,6 +19,7 @@ import {
   DEFAULT_SORT,
   DEFAULT_SORT_ORDER,
   DEFAULT_VIEW_MODE,
+  RAIL,
   SORT_FIELDS,
   STORAGE_KEYS,
   VIEW_MODES,
@@ -25,8 +29,11 @@ type Preferences = {
   viewMode: ViewMode;
   sort: SortField;
   order: SortOrder;
+  /** Distance from the bottom of the screen to the edge rail's centre. */
+  railOffset: number;
   setViewMode: (mode: ViewMode) => void;
   setSort: (sort: SortField, order: SortOrder) => void;
+  setRailOffset: (offset: number) => void;
 };
 
 const PreferencesContext = createContext<Preferences | null>(null);
@@ -39,10 +46,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     sort: DEFAULT_SORT,
     order: DEFAULT_SORT_ORDER,
   });
+  const [railOffset, setRailOffsetState] = useState<number>(RAIL.defaultBottomInset);
 
   useEffect(() => {
     let cancelled = false;
-    void AsyncStorage.multiGet([STORAGE_KEYS.viewMode, STORAGE_KEYS.sort]).then((entries) => {
+    void AsyncStorage.multiGet([
+      STORAGE_KEYS.viewMode,
+      STORAGE_KEYS.sort,
+      STORAGE_KEYS.railOffset,
+    ]).then((entries) => {
       if (cancelled) return;
       const stored = Object.fromEntries(entries);
       const mode = stored[STORAGE_KEYS.viewMode];
@@ -58,6 +70,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
           // a corrupt entry simply falls back to the defaults
         }
       }
+      const rawOffset = Number(stored[STORAGE_KEYS.railOffset]);
+      // The rail re-clamps to the viewport, so any finite value is safe here.
+      if (Number.isFinite(rawOffset) && rawOffset > 0) setRailOffsetState(rawOffset);
     });
     return () => {
       cancelled = true;
@@ -75,9 +90,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(STORAGE_KEYS.sort, JSON.stringify(next));
   }, []);
 
+  const setRailOffset = useCallback((offset: number) => {
+    const rounded = Math.round(offset);
+    setRailOffsetState(rounded);
+    void AsyncStorage.setItem(STORAGE_KEYS.railOffset, String(rounded));
+  }, []);
+
   const value = useMemo(
-    () => ({ viewMode, sort, order, setViewMode, setSort }),
-    [viewMode, sort, order, setViewMode, setSort],
+    () => ({ viewMode, sort, order, railOffset, setViewMode, setSort, setRailOffset }),
+    [viewMode, sort, order, railOffset, setViewMode, setSort, setRailOffset],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

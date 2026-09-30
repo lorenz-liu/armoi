@@ -137,7 +137,11 @@ export const layout = {
     width: u(RAIL.widthUnits),
     tabHeight: u(RAIL.tabHeightUnits),
     padding: u(RAIL.paddingUnits),
-    height: u(RAIL.tabHeightUnits) * 2 + u(RAIL.paddingUnits) * 2,
+    gripBlock: u(RAIL.gripBlockUnits),
+    gripWidth: u(RAIL.gripWidthUnits),
+    // Everything the rail actually renders — the grip included, or the
+    // centring maths would place it a few points off.
+    height: u(RAIL.tabHeightUnits) * 2 + u(RAIL.paddingUnits) * 2 + u(RAIL.gripBlockUnits),
   },
   /** Minimum touch target, per both platforms' accessibility guidance. */
   touchTarget: u(11),

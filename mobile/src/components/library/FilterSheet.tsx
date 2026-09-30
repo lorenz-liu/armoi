@@ -7,14 +7,29 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import type { Currency, Gender, Season } from '@/api';
-import { CURRENCIES, GENDERS, SEASONS } from '@/config';
+import { CURRENCIES, CURRENCY_SYMBOLS, GENDERS, SEASONS } from '@/config';
 import { EMPTY_FACETS, countActiveFacets, type Facets } from '@/hooks/useLibrary';
 import { useI18n } from '@/i18n';
 import { color, layout, space } from '@/theme';
 
-import { Button, Chip, Sheet, Text, TextField } from '../ui';
+import {
+  Button,
+  Chip,
+  SelectField,
+  SelectSheet,
+  Sheet,
+  Text,
+  TextField,
+  type SelectOption,
+} from '../ui';
 
 import { CategoryPicker } from './CategoryPicker';
+
+const CURRENCY_OPTIONS: SelectOption<Currency>[] = CURRENCIES.map((code) => ({
+  value: code,
+  label: code,
+  caption: CURRENCY_SYMBOLS[code],
+}));
 
 /** Toggles a value in and out of a facet array. */
 function toggle<T>(values: T[], value: T): T[] {
@@ -42,6 +57,7 @@ function FilterSheetBody({ visible, facets, onClose, onApply, hidden = [] }: Fil
   const { t, tCategoryPath } = useI18n();
   const [draft, setDraft] = useState(facets);
   const [pickingCategory, setPickingCategory] = useState(false);
+  const [pickingCurrency, setPickingCurrency] = useState(false);
 
   const shows = (facet: keyof Facets) => !hidden.includes(facet);
   const parsePrice = (raw: string): number | null => {
@@ -52,7 +68,7 @@ function FilterSheetBody({ visible, facets, onClose, onApply, hidden = [] }: Fil
   return (
     <>
       <Sheet
-        visible={visible && !pickingCategory}
+        visible={visible && !pickingCategory && !pickingCurrency}
         onClose={onClose}
         title={t('filter.title')}
         closeLabel={t('common.close')}
@@ -156,21 +172,13 @@ function FilterSheetBody({ visible, facets, onClose, onApply, hidden = [] }: Fil
                 />
               </View>
             </View>
-            <Row>
-              {CURRENCIES.map((currency: Currency) => (
-                <Chip
-                  key={currency}
-                  label={currency}
-                  selected={draft.currency === currency}
-                  onPress={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      currency: current.currency === currency ? null : currency,
-                    }))
-                  }
-                />
-              ))}
-            </Row>
+            <SelectField
+              accessibilityLabel={t('item.currency')}
+              value={draft.currency}
+              options={CURRENCY_OPTIONS}
+              placeholder={t('filter.anyCurrency')}
+              onPress={() => setPickingCurrency(true)}
+            />
           </Section>
 
           <Text variant="caption" tone="faint" style={{ paddingBottom: space.md }}>
@@ -180,6 +188,20 @@ function FilterSheetBody({ visible, facets, onClose, onApply, hidden = [] }: Fil
           </Text>
         </ScrollView>
       </Sheet>
+
+      {/* Both live outside the sheet above: it hides while they are open, and
+          anything nested inside it would unmount along with it. */}
+      <SelectSheet
+        visible={pickingCurrency}
+        title={t('item.currency')}
+        value={draft.currency}
+        options={CURRENCY_OPTIONS}
+        onChange={(currency) => setDraft((current) => ({ ...current, currency }))}
+        onClose={() => setPickingCurrency(false)}
+        clearLabel={t('filter.anyCurrency')}
+        onClear={() => setDraft((current) => ({ ...current, currency: null }))}
+        closeLabel={t('common.close')}
+      />
 
       <CategoryPicker
         visible={pickingCategory}

@@ -12,6 +12,7 @@ export const en = {
     brand: 'Brands',
     settings: 'Settings',
     back: 'Back',
+    railHint: 'Drag the bar to move it',
   },
 
   library: {
@@ -58,6 +59,7 @@ export const en = {
     storage: 'Storage',
     price: 'Price',
     anyCategory: 'Any category',
+    anyCurrency: 'Any currency',
   },
 
   item: {
@@ -174,6 +176,7 @@ export const zh: Mirror<Dictionary> = {
     brand: '品牌',
     settings: '设置',
     back: '返回',
+    railHint: '拖动侧边栏可调整位置',
   },
 
   library: {
@@ -220,6 +223,7 @@ export const zh: Mirror<Dictionary> = {
     storage: '收纳位置',
     price: '价格',
     anyCategory: '全部类别',
+    anyCurrency: '全部货币',
   },
 
   item: {

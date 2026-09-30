@@ -1,6 +1,6 @@
 export { AutocompleteField } from './AutocompleteField';
 export { CategoryPicker } from './CategoryPicker';
-export { EdgeRail, type RailTab } from './EdgeRail';
+export { EDGE_RAIL_TEST_ID, EdgeRail, clampRailCentre, type RailTab } from './EdgeRail';
 export { FilterSheet } from './FilterSheet';
 export { GridSpacer, LibraryGrid, LIBRARY_GRID_TEST_ID } from './LibraryGrid';
 export { LibraryHeader } from './LibraryHeader';

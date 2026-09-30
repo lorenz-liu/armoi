@@ -76,6 +76,12 @@ export const CURRENCIES = [
 ] as const;
 export const DEFAULT_CURRENCY = 'CNY';
 
+/** Shown beside each code in the currency dropdown. */
+export const CURRENCY_SYMBOLS: Record<(typeof CURRENCIES)[number], string> = {
+  CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', KRW: '₩', HKD: 'HK$',
+  TWD: 'NT$', SGD: 'S$', AUD: 'A$', CAD: 'C$', CHF: 'CHF', SEK: 'kr', THB: '฿',
+};
+
 export const SORT_FIELDS = ['created_at', 'updated_at', 'name', 'price'] as const;
 export const DEFAULT_SORT = 'created_at';
 export const DEFAULT_SORT_ORDER = 'desc';
@@ -163,6 +169,22 @@ export const RAIL = {
   widthUnits: 14, //        56pt — comfortably past the 44pt touch minimum
   tabHeightUnits: 18, //    72pt per tab
   paddingUnits: SPACE_STEPS.xs,
+
+  /** The drag grip's block: it is part of the rail, so part of its height. */
+  gripBlockUnits: SPACE_STEPS.xs, // 8pt
+  gripWidthUnits: 4, //              16pt
+  gripLineHeight: 2,
+
+  /**
+   * Where the rail sits when it has never been moved: the distance from the
+   * bottom of the screen to the rail's vertical centre. The user can drag it
+   * anywhere along the right edge, and the chosen position is remembered.
+   */
+  defaultBottomInset: 500,
+  /** Clearance kept between the rail and the safe-area edges when clamping. */
+  edgeMarginUnits: SPACE_STEPS.md,
+  /** Vertical travel before a touch becomes a drag rather than a tap. */
+  dragActivationDistance: 4,
 } as const;
 
 // ── Motion ─────────────────────────────────────────────────────────────────
@@ -233,6 +255,7 @@ export const STORAGE_KEYS = {
   language: 'armoi.language',
   viewMode: 'armoi.viewMode',
   sort: 'armoi.sort',
+  railOffset: 'armoi.railOffset',
 } as const;
 
 export const LANGUAGES = ['en', 'zh'] as const;

@@ -33,13 +33,22 @@ import {
   PairingPicker,
   PhotoStrip,
   Screen,
+  Select,
   Text,
   TextField,
   Touchable,
+  type SelectOption,
 } from '@/components';
-import { CURRENCIES, DEFAULT_CURRENCY, GENDERS, LIMITS, SEASONS } from '@/config';
+import { CURRENCIES, CURRENCY_SYMBOLS, DEFAULT_CURRENCY, GENDERS, LIMITS, SEASONS } from '@/config';
 import { useI18n } from '@/i18n';
 import { color, layout, radius, space } from '@/theme';
+
+/** Code as the label, symbol as the trailing hint — stable in both languages. */
+const CURRENCY_OPTIONS: SelectOption<Currency>[] = CURRENCIES.map((code) => ({
+  value: code,
+  label: code,
+  caption: CURRENCY_SYMBOLS[code],
+}));
 
 const EMPTY_DRAFT: ItemDraft = {
   name: '',
@@ -330,17 +339,20 @@ export default function ItemFormRoute() {
               placeholder="0.00"
               keyboardType="decimal-pad"
               accessibilityLabel={t('item.priceAmount')}
-            />
-            <Wrap>
-              {CURRENCIES.map((currency: Currency) => (
-                <Chip
-                  key={currency}
-                  label={currency}
-                  selected={draft.price_currency === currency}
-                  onPress={() => patch({ price_currency: currency })}
+              // The unit belongs to the amount, so it lives inside the field.
+              trailing={
+                <Select
+                  compact
+                  title={t('item.currency')}
+                  accessibilityLabel={t('item.currency')}
+                  value={draft.price_currency ?? DEFAULT_CURRENCY}
+                  options={CURRENCY_OPTIONS}
+                  placeholder={DEFAULT_CURRENCY}
+                  onChange={(price_currency) => patch({ price_currency })}
+                  closeLabel={t('common.close')}
                 />
-              ))}
-            </Wrap>
+              }
+            />
           </Field>
 
           <TextField

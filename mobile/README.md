@@ -86,9 +86,12 @@ n·w + (n−1)·gap + 2·gutter = viewport
 for `w`, with `gutter = 16`, `gap = 12`. All four view modes (1 / 2 / 3 columns
 and list) therefore share identical outer margins and sit on the same grid.
 
-**The rail.** Height is derived, not chosen: `2 · tabHeight + 2 · padding`. It
-is centred by translating up half its own height, and its width is at least one
-44pt touch target.
+**The rail.** Height is derived, not chosen: `2 · tabHeight + 2 · padding +
+gripBlock` — everything it actually renders, so the centring maths cannot drift
+from the pixels. It rests `RAIL.defaultBottomInset` (500pt) above the bottom of
+the screen, measured to its centre, and can be dragged anywhere along the right
+edge; the position is clamped inside the safe area and remembered. Its width is
+comfortably past the 44pt touch minimum.
 
 **Elevation.** Four levels, each a soft wide shadow under 10% opacity — the
 "floating paper" the brief asks for, never a hard drop shadow.

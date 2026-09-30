@@ -87,8 +87,10 @@ describe('grid solver', () => {
 });
 
 describe('rail geometry', () => {
-  it('derives its height from its two tabs plus padding', () => {
-    expect(layout.rail.height).toBe(layout.rail.tabHeight * 2 + layout.rail.padding * 2);
+  it('derives its height from everything it renders — tabs, padding and grip', () => {
+    expect(layout.rail.height).toBe(
+      layout.rail.tabHeight * 2 + layout.rail.padding * 2 + layout.rail.gripBlock,
+    );
   });
 
   it('is at least one touch target wide', () => {
