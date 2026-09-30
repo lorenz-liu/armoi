@@ -3,6 +3,7 @@
 import type {
   CURRENCIES,
   GENDERS,
+  ITEM_FIELDS,
   SEASONS,
   SORT_FIELDS,
   SORT_OPTIONS,
@@ -15,6 +16,7 @@ export type Currency = (typeof CURRENCIES)[number];
 export type SortField = (typeof SORT_FIELDS)[number];
 export type SortOrder = 'asc' | 'desc';
 export type SortOptionId = (typeof SORT_OPTIONS)[number]['id'];
+export type ItemField = (typeof ITEM_FIELDS)[number];
 export type ViewMode = (typeof VIEW_MODES)[number];
 
 export type ItemImage = {

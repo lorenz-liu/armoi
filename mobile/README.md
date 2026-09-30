@@ -29,7 +29,7 @@ a deployed server or a tunnel.
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # expo lint
-npm test            # 134 tests
+npm test            # 152 tests
 ```
 
 ## Layout
@@ -100,6 +100,14 @@ comfortably past the 44pt touch minimum.
 neutrals interpolated between them. The only chromatic notes are the four
 season dots and a single muted bronze for selection, all desaturated so they
 never compete with the photography.
+
+**The cell caption is the user's choice.** A library cell always carries its
+photograph and its name; everything else — brand, storage, category, price,
+last worn, seasons — is chosen in Settings and defaults to brand, storage and
+seasons, because where a piece lives is more use day to day than what it cost.
+One hook builds the caption for both cards and list rows, so the two cannot
+drift, and the line always renders in the canonical field order however the
+choices were made.
 
 **Sorting is a menu of ideas, not axes.** Seven named orderings — recently
 added, longest unworn, recently worn, name A–Z / Z–A, price up / down — chosen

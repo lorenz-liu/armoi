@@ -91,6 +91,18 @@ export const SORT_FIELDS = ['created_at', 'updated_at', 'name', 'price', 'last_u
  * user has to combine themselves: "longest unworn" is one idea, not
  * "last_used, ascending". Each id doubles as its `sort.<id>` translation key.
  */
+/**
+ * The metadata a library cell can carry beneath its photograph, in the order
+ * it is rendered. The name is always shown and is not listed here.
+ *
+ * `brand` takes the eyebrow line and `seasons` renders as dots; the rest join
+ * one muted line, so any subset stays legible at every view density.
+ */
+export const ITEM_FIELDS = ['brand', 'storage', 'category', 'price', 'lastUsed', 'seasons'] as const;
+
+/** Where you keep a piece is more use day to day than what it cost. */
+export const DEFAULT_ITEM_FIELDS = ['brand', 'storage', 'seasons'] as const;
+
 export const SORT_OPTIONS = [
   { id: 'newest', field: 'created_at', order: 'desc' },
   { id: 'longestUnused', field: 'last_used', order: 'asc' },
@@ -273,6 +285,7 @@ export const STORAGE_KEYS = {
   viewMode: 'armoi.viewMode',
   // Renamed with the shape change, so an old {sort, order} entry is ignored.
   sortOption: 'armoi.sortOption',
+  itemFields: 'armoi.itemFields',
   railOffset: 'armoi.railOffset',
 } as const;
 

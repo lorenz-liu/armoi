@@ -9,6 +9,7 @@
 import { View } from 'react-native';
 
 import type { ItemSummary, ViewMode } from '@/api';
+import { useItemCaption } from '@/hooks/useItemCaption';
 import { useI18n } from '@/i18n';
 import { color, elevation, radius, space } from '@/theme';
 
@@ -17,10 +18,6 @@ import { Surface, Text, Touchable } from '../ui';
 import { ItemPhoto } from './ItemImage';
 import { SeasonDots } from './SeasonDots';
 import { UsageButton } from './UsageButton';
-
-/** Caption density per view mode — small cells cannot carry three lines. */
-const SHOWS_BRAND: Record<ViewMode, boolean> = { big: true, medium: true, small: false, list: true };
-const SHOWS_PRICE: Record<ViewMode, boolean> = { big: true, medium: true, small: false, list: true };
 
 export type ItemCardProps = {
   item: ItemSummary;
@@ -41,7 +38,8 @@ export function ItemCard({
   onMarkUsed,
   flipped = false,
 }: ItemCardProps) {
-  const { t, formatPrice, tCategory } = useI18n();
+  const { t } = useI18n();
+  const caption = useItemCaption(item);
   const padding = mode === 'small' ? space.xs : space.sm;
 
   return (
@@ -70,9 +68,9 @@ export function ItemCard({
             alignItems: flipped ? 'flex-end' : 'flex-start',
           }}
         >
-          {SHOWS_BRAND[mode] && item.brand ? (
+          {caption.brand ? (
             <Text variant="overline" tone="faint" numberOfLines={1}>
-              {item.brand}
+              {caption.brand}
             </Text>
           ) : null}
           <Text
@@ -82,26 +80,21 @@ export function ItemCard({
           >
             {item.name || t('item.untitled')}
           </Text>
-          {mode === 'big' && item.category_id ? (
-            <Text variant="caption" tone="muted" numberOfLines={1}>
-              {tCategory(item.category_id)}
+          {caption.meta ? (
+            <Text
+              variant="caption"
+              tone="muted"
+              numberOfLines={mode === 'small' ? 1 : 2}
+              style={{ textAlign: flipped ? 'right' : 'left' }}
+            >
+              {caption.meta}
             </Text>
           ) : null}
-          <View
-            style={{
-              flexDirection: flipped ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              gap: space.xs,
-              marginTop: space.xxs,
-            }}
-          >
-            <SeasonDots seasons={item.seasons} />
-            {SHOWS_PRICE[mode] && item.price_amount ? (
-              <Text variant="price" tone="muted">
-                {formatPrice(item.price_amount, item.price_currency)}
-              </Text>
-            ) : null}
-          </View>
+          {caption.showSeasons ? (
+            <View style={{ marginTop: space.xxs }}>
+              <SeasonDots seasons={item.seasons} />
+            </View>
+          ) : null}
         </View>
         {item.image_count > 1 ? <PhotoCount count={item.image_count} inset={padding * 2} /> : null}
       </Surface>

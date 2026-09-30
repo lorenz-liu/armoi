@@ -6,7 +6,7 @@ import { useCallback } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, type ViewMode } from '@/api';
+import { api, type ItemField, type ViewMode } from '@/api';
 import {
   Chip,
   Icon,
@@ -17,16 +17,26 @@ import {
   Text,
   type Segment,
 } from '@/components';
-import { API, LANGUAGES, VIEW_MODES } from '@/config';
+import { API, ITEM_FIELDS, LANGUAGES, VIEW_MODES } from '@/config';
 import { useAsync } from '@/hooks/useAsync';
 import { usePreferences } from '@/hooks/usePreferences';
-import { useI18n, type Language } from '@/i18n';
+import { useI18n, type Language, type TranslationKey } from '@/i18n';
 import { color, layout, space } from '@/theme';
+
+/** Each field reuses the label the item form already gives it. */
+const ITEM_FIELD_LABELS = {
+  brand: 'item.brand',
+  storage: 'item.storage',
+  category: 'item.category',
+  price: 'item.price',
+  lastUsed: 'item.lastUsed',
+  seasons: 'item.season',
+} as const satisfies Record<ItemField, TranslationKey>;
 
 export default function SettingsRoute() {
   const router = useRouter();
   const { t, language, setLanguage } = useI18n();
-  const { viewMode, setViewMode } = usePreferences();
+  const { viewMode, setViewMode, itemFields, toggleItemField } = usePreferences();
   const insets = useSafeAreaInsets();
 
   const stats = useAsync(useCallback(() => api.catalog.stats(), []), []);
@@ -77,6 +87,22 @@ export default function SettingsRoute() {
 
         <Section title={t('settings.defaultView')}>
           <SegmentedControl segments={viewSegments} value={viewMode} onChange={setViewMode} fill />
+        </Section>
+
+        <Section title={t('settings.itemFields')}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xs }}>
+            {ITEM_FIELDS.map((field: ItemField) => (
+              <Chip
+                key={field}
+                label={t(ITEM_FIELD_LABELS[field])}
+                selected={itemFields.includes(field)}
+                onPress={() => toggleItemField(field)}
+              />
+            ))}
+          </View>
+          <Text variant="caption" tone="faint">
+            {t('settings.itemFieldsHint')}
+          </Text>
         </Section>
 
         <Section title={t('settings.stats')}>

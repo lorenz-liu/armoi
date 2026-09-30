@@ -14,10 +14,12 @@ import {
   type ReactNode,
 } from 'react';
 
-import type { SortField, SortOptionId, SortOrder, ViewMode } from '@/api';
+import type { ItemField, SortField, SortOptionId, SortOrder, ViewMode } from '@/api';
 import {
+  DEFAULT_ITEM_FIELDS,
   DEFAULT_SORT_OPTION,
   DEFAULT_VIEW_MODE,
+  ITEM_FIELDS,
   RAIL,
   SORT_OPTIONS,
   STORAGE_KEYS,
@@ -38,9 +40,12 @@ type Preferences = {
   order: SortOrder;
   /** Distance from the bottom of the screen to the edge rail's centre. */
   railOffset: number;
+  /** Which metadata library cells carry beneath the photograph. */
+  itemFields: ItemField[];
   setViewMode: (mode: ViewMode) => void;
   setSortOption: (option: SortOptionId) => void;
   setRailOffset: (offset: number) => void;
+  toggleItemField: (field: ItemField) => void;
 };
 
 const PreferencesContext = createContext<Preferences | null>(null);
@@ -49,6 +54,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [viewMode, setViewModeState] = useState<ViewMode>(DEFAULT_VIEW_MODE);
   const [sortOption, setSortOptionState] = useState<SortOptionId>(DEFAULT_SORT_OPTION);
   const [railOffset, setRailOffsetState] = useState<number>(RAIL.defaultBottomInset);
+  const [itemFields, setItemFieldsState] = useState<ItemField[]>([...DEFAULT_ITEM_FIELDS]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +62,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       STORAGE_KEYS.viewMode,
       STORAGE_KEYS.sortOption,
       STORAGE_KEYS.railOffset,
+      STORAGE_KEYS.itemFields,
     ]).then((entries) => {
       if (cancelled) return;
       const stored = Object.fromEntries(entries);
@@ -70,6 +77,19 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       const rawOffset = Number(stored[STORAGE_KEYS.railOffset]);
       // The rail re-clamps to the viewport, so any finite value is safe here.
       if (Number.isFinite(rawOffset) && rawOffset > 0) setRailOffsetState(rawOffset);
+
+      const rawFields = stored[STORAGE_KEYS.itemFields];
+      if (rawFields) {
+        try {
+          const parsed = JSON.parse(rawFields) as unknown;
+          if (Array.isArray(parsed)) {
+            // Keep only fields this build knows, in the canonical render order.
+            setItemFieldsState(ITEM_FIELDS.filter((field) => parsed.includes(field)));
+          }
+        } catch {
+          // a corrupt entry simply falls back to the defaults
+        }
+      }
     });
     return () => {
       cancelled = true;
@@ -92,6 +112,16 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(STORAGE_KEYS.railOffset, String(rounded));
   }, []);
 
+  const toggleItemField = useCallback((field: ItemField) => {
+    setItemFieldsState((current) => {
+      const next = current.includes(field)
+        ? current.filter((entry) => entry !== field)
+        : ITEM_FIELDS.filter((entry) => entry === field || current.includes(entry));
+      void AsyncStorage.setItem(STORAGE_KEYS.itemFields, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const value = useMemo(() => {
     const { sort, order } = resolveSort(sortOption);
     return {
@@ -100,11 +130,22 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       sort,
       order,
       railOffset,
+      itemFields,
       setViewMode,
       setSortOption,
       setRailOffset,
+      toggleItemField,
     };
-  }, [viewMode, sortOption, railOffset, setViewMode, setSortOption, setRailOffset]);
+  }, [
+    viewMode,
+    sortOption,
+    railOffset,
+    itemFields,
+    setViewMode,
+    setSortOption,
+    setRailOffset,
+    toggleItemField,
+  ]);
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

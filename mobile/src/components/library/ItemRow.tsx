@@ -3,6 +3,7 @@
 import { View } from 'react-native';
 
 import type { ItemSummary } from '@/api';
+import { useItemCaption } from '@/hooks/useItemCaption';
 import { useI18n } from '@/i18n';
 import { layout, radius, space } from '@/theme';
 
@@ -21,7 +22,8 @@ export type ItemRowProps = {
 };
 
 export function ItemRow({ item, onPress, onMarkUsed }: ItemRowProps) {
-  const { t, formatPrice, tCategory } = useI18n();
+  const { t } = useI18n();
+  const caption = useItemCaption(item);
 
   return (
     <Touchable accessibilityRole="button" accessibilityLabel={item.name} onPress={onPress}>
@@ -39,32 +41,25 @@ export function ItemRow({ item, onPress, onMarkUsed }: ItemRowProps) {
           placeholderIconSize={18}
         />
         <View style={{ flex: 1, gap: space.xxs, paddingRight: space.xs }}>
-          {item.brand ? (
+          {caption.brand ? (
             <Text variant="overline" tone="faint" numberOfLines={1}>
-              {item.brand}
+              {caption.brand}
             </Text>
           ) : null}
           <Text variant="bodyStrong" numberOfLines={1}>
             {item.name || t('item.untitled')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
-            <SeasonDots seasons={item.seasons} />
-            {item.category_id ? (
+            {caption.showSeasons ? <SeasonDots seasons={item.seasons} /> : null}
+            {caption.meta ? (
               <Text variant="caption" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
-                {tCategory(item.category_id)}
+                {caption.meta}
               </Text>
             ) : null}
           </View>
         </View>
-        <View style={{ alignItems: 'flex-end', gap: space.xxs }}>
-          {item.price_amount ? (
-            <Text variant="price" tone="muted">
-              {formatPrice(item.price_amount, item.price_currency)}
-            </Text>
-          ) : null}
-          {/* A row has no space *under* the thumbnail, so it sits trailing. */}
-          <UsageButton lastUsedDate={item.last_used_date} onPress={onMarkUsed} />
-        </View>
+        {/* A row has no space *under* the thumbnail, so it sits trailing. */}
+        <UsageButton lastUsedDate={item.last_used_date} onPress={onMarkUsed} />
       </Surface>
     </Touchable>
   );

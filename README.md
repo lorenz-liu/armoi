@@ -19,6 +19,8 @@ price — then browse the collection as a lookbook rather than a spreadsheet.
 - **One browsing surface** — search across every textual field, filter by any
   facet, sort, and switch between four view densities (1 / 2 / 3 up, or list).
   The main screen, a brand page and a storage page all behave identically.
+- **Your own shorthand** — choose what each cell shows beneath its photograph:
+  brand, storage, category, price, last worn, seasons.
 - **Bilingual** — the whole UI, including all 200 category names, in English
   and Chinese, switchable in Settings.
 
@@ -57,7 +59,7 @@ URLs. Override with `EXPO_PUBLIC_API_BASE_URL` only to point elsewhere.
 | `make dev` | Backend and Expo dev server together. |
 | `make api` / `make app` | Just one side. |
 | `make db reset` | Delete the database and uploaded images (asks first). |
-| `make test` | Both suites — 83 backend, 134 mobile. |
+| `make test` | Both suites — 83 backend, 152 mobile. |
 | `make lint` | ruff, then tsc and eslint. |
 | `make categories` | Regenerate the category tree from `TODO.md`. |
 | `make install` | Dependencies and `.env` files only. |

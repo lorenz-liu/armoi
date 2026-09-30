@@ -96,14 +96,15 @@ describe('LibraryGrid', () => {
     expect(screen.getByText('Chelsea Boots')).toBeTruthy();
   });
 
-  it('shows the brand as the card eyebrow when the cell is wide enough', async () => {
+  it('shows the brand as the card eyebrow', async () => {
     await renderGrid({ mode: 'big' });
     expect(screen.getByText('Totême')).toBeTruthy();
   });
 
-  it('drops the brand line in the three-up view, where it would not fit', async () => {
-    await renderGrid({ mode: 'small' });
-    expect(screen.queryByText('Totême')).toBeNull();
+  /** The chosen fields are the user's decision, not the column count's. */
+  it.each(VIEW_MODES)('honours the chosen fields in %s view', async (mode) => {
+    await renderGrid({ mode });
+    expect(screen.getAllByText('Totême').length).toBeGreaterThan(0);
   });
 
   it('reports the tapped item', async () => {
