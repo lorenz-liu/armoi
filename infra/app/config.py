@@ -7,8 +7,10 @@ domain constants declared underneath it.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Directory layout -----------------------------------------------------------
@@ -16,7 +18,12 @@ INFRA_ROOT: Path = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    """Environment-driven settings. Prefix every env var with ``ARMOI_``."""
+    """Environment-driven settings. Prefix every env var with ``ARMOI_``.
+
+    On Fly, ``fly postgres attach`` and ``fly storage create`` inject the
+    unprefixed ``DATABASE_URL`` / ``AWS_*`` / ``BUCKET_NAME`` names; those are
+    accepted as fallbacks so secrets do not need to be duplicated.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="ARMOI_",
@@ -62,6 +69,25 @@ class Settings(BaseSettings):
     s3_public_base_url: str = ""
     s3_presign_ttl_seconds: int = 60 * 60
 
+    @model_validator(mode="after")
+    def _apply_fly_native_fallbacks(self) -> Settings:
+        """Fill gaps from Fly-provisioned env vars when ARMOI_* is unset."""
+        if self.database_url == "sqlite:///./data/armoi.db":
+            fly_db = os.environ.get("DATABASE_URL")
+            if fly_db:
+                self.database_url = fly_db
+        if not self.s3_endpoint_url:
+            self.s3_endpoint_url = os.environ.get("AWS_ENDPOINT_URL_S3", "")
+        if self.s3_region == "auto" and os.environ.get("AWS_REGION"):
+            self.s3_region = os.environ["AWS_REGION"]
+        if not self.s3_bucket:
+            self.s3_bucket = os.environ.get("BUCKET_NAME", "")
+        if not self.s3_access_key_id:
+            self.s3_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID", "")
+        if not self.s3_secret_access_key:
+            self.s3_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+        return self
+
     # --- derived helpers ---------------------------------------------------
     @property
     def resolved_media_dir(self) -> Path:
@@ -70,13 +96,18 @@ class Settings(BaseSettings):
 
     @property
     def resolved_database_url(self) -> str:
-        """Turn a relative sqlite path into an absolute one rooted at infra/."""
+        """Absolute sqlite paths; Postgres URLs use the psycopg3 dialect."""
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = "postgresql+psycopg://" + url.removeprefix("postgres://")
+        elif url.startswith("postgresql://"):
+            url = "postgresql+psycopg://" + url.removeprefix("postgresql://")
         prefix = "sqlite:///"
-        if not self.database_url.startswith(prefix):
-            return self.database_url
-        raw = self.database_url[len(prefix) :]
+        if not url.startswith(prefix):
+            return url
+        raw = url[len(prefix) :]
         if raw.startswith("/") or raw == ":memory:":
-            return self.database_url
+            return url
         return prefix + str((INFRA_ROOT / raw).resolve())
 
     @property

@@ -1,6 +1,7 @@
 export { Button, type ButtonProps, type ButtonVariant } from './Button';
 export { Chip, type ChipProps } from './Chip';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export { GoogleG } from './GoogleG';
 export { Icon, IconButton, type IconName } from './IconButton';
 export { Touchable, type TouchableProps } from './Pressable';
 export { SegmentedControl, type Segment } from './SegmentedControl';

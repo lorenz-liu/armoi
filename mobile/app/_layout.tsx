@@ -56,6 +56,7 @@ export default function RootLayout() {
                   }}
                 >
                   <Stack.Screen name="(auth)/login" />
+                  <Stack.Screen name="(auth)/terms" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="(app)" />
                 </Stack>
               </AuthGate>

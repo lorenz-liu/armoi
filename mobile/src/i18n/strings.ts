@@ -156,6 +156,9 @@ export const en = {
     signOut: 'Sign out',
     notConfigured: 'Sign-in is not configured. Add OAuth client IDs to the app env.',
     privacy: 'Armoi never posts on your behalf. Your library stays yours.',
+    consentPrefix: 'By continuing, you agree to the ',
+    consentLink: 'Terms of Use',
+    consentSuffix: '.',
   },
 
   common: {
@@ -343,6 +346,9 @@ export const zh: Mirror<Dictionary> = {
     signOut: '退出登录',
     notConfigured: '尚未配置登录。请在应用环境变量中填入 OAuth Client ID。',
     privacy: 'Armoi 不会代表你发帖。你的衣橱只属于你。',
+    consentPrefix: '继续即表示您同意',
+    consentLink: '用户条款',
+    consentSuffix: '。',
   },
 
   common: {

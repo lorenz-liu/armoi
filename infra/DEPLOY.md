@@ -15,24 +15,21 @@ The API lives in `infra/`. The Expo app talks to it over HTTPS once
 cd infra
 fly apps create armoi-api          # or reuse the name in fly.toml
 fly postgres create --name armoi-db
-fly postgres attach armoi-db       # sets DATABASE_URL; map it below
-fly storage create                 # Tigris bucket + access keys
+fly postgres attach armoi-db       # injects DATABASE_URL (read as a fallback)
+fly storage create                 # Tigris: AWS_* + BUCKET_NAME (also fallbacks)
 ```
 
-Set secrets (names match `ARMOI_*` settings):
+The app prefers `ARMOI_*` settings, but also accepts Fly-native
+`DATABASE_URL`, `AWS_*`, and `BUCKET_NAME` so those provisioned secrets do
+not need to be copied. `fly.toml` already sets `ARMOI_MEDIA_BACKEND=s3`.
+
+Still set auth secrets explicitly:
 
 ```bash
 fly secrets set \
-  ARMOI_DATABASE_URL="postgres://..." \
   ARMOI_JWT_SECRET="$(openssl rand -hex 32)" \
   ARMOI_GOOGLE_CLIENT_IDS="ios-client-id,android-client-id" \
-  ARMOI_APPLE_CLIENT_ID="com.armoi.app" \
-  ARMOI_MEDIA_BACKEND=s3 \
-  ARMOI_S3_ENDPOINT_URL="https://fly.storage.tigris.dev" \
-  ARMOI_S3_REGION=auto \
-  ARMOI_S3_BUCKET="..." \
-  ARMOI_S3_ACCESS_KEY_ID="..." \
-  ARMOI_S3_SECRET_ACCESS_KEY="..."
+  ARMOI_APPLE_CLIENT_ID="com.armoi.app"
 ```
 
 `fly.toml` runs `alembic upgrade head` as the release command, so the schema
