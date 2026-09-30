@@ -55,6 +55,13 @@ export const API = {
   retryBackoffMs: 400,
 } as const;
 
+export const AUTH = {
+  googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() ?? '',
+  googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim() ?? '',
+  googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() ?? '',
+  appleClientId: process.env.EXPO_PUBLIC_APPLE_CLIENT_ID?.trim() || 'com.armoi.app',
+} as const;
+
 // ── Domain limits (mirror infra/app/config.py) ─────────────────────────────
 export const LIMITS = {
   maxImagesPerItem: 10,
@@ -287,6 +294,8 @@ export const STORAGE_KEYS = {
   sortOption: 'armoi.sortOption',
   itemFields: 'armoi.itemFields',
   railOffset: 'armoi.railOffset',
+  accessToken: 'armoi.accessToken',
+  refreshToken: 'armoi.refreshToken',
 } as const;
 
 export const LANGUAGES = ['en', 'zh'] as const;

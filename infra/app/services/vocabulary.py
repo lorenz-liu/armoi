@@ -2,7 +2,8 @@
 
 Both behave identically — created on demand when an item names one, matched
 case-insensitively, offered back as prefix autocomplete — so they share one
-generic implementation parameterised by the model class.
+generic implementation parameterised by the model class. Every query is
+scoped to the owning user.
 """
 
 from __future__ import annotations
@@ -30,44 +31,54 @@ def clean(name: str) -> str:
     return " ".join(name.split())
 
 
-def find_by_name[V: (Brand, Storage)](session: Session, model: type[V], name: str) -> V | None:
+def find_by_name[V: (Brand, Storage)](
+    session: Session, model: type[V], name: str, *, user_id: int
+) -> V | None:
     key = normalize(name)
     if not key:
         return None
-    return session.scalar(select(model).where(model.normalized_name == key))
+    return session.scalar(
+        select(model).where(model.user_id == user_id, model.normalized_name == key)
+    )
 
 
 def get_or_create[V: (Brand, Storage)](
-    session: Session, model: type[V], name: str | None
+    session: Session, model: type[V], name: str | None, *, user_id: int
 ) -> V | None:
     """Resolve a free-text name to a row, creating it the first time it is used."""
     if name is None or not clean(name):
         return None
-    existing = find_by_name(session, model, name)
+    existing = find_by_name(session, model, name, user_id=user_id)
     if existing is not None:
         return existing
-    created = model(name=clean(name), normalized_name=normalize(name))
+    created = model(user_id=user_id, name=clean(name), normalized_name=normalize(name))
     session.add(created)
     session.flush()
     return created
 
 
-def _count_subquery(model: VocabularyModel):
+def _count_subquery(model: VocabularyModel, user_id: int):
     fk = ITEM_FK_BY_MODEL[model]
     return (
         select(fk.label("ref_id"), func.count(Item.id).label("item_count"))
+        .where(Item.user_id == user_id)
         .group_by(fk)
         .subquery()
     )
 
 
 def list_with_counts[V: (Brand, Storage)](
-    session: Session, model: type[V], search: str | None = None
+    session: Session,
+    model: type[V],
+    *,
+    user_id: int,
+    search: str | None = None,
 ) -> list[tuple[V, int]]:
-    counts = _count_subquery(model)
+    counts = _count_subquery(model, user_id)
     stmt: Select = (
         select(model, func.coalesce(counts.c.item_count, 0))
         .outerjoin(counts, counts.c.ref_id == model.id)
+        .where(model.user_id == user_id)
         .order_by(model.normalized_name)
     )
     if search and search.strip():
@@ -76,26 +87,32 @@ def list_with_counts[V: (Brand, Storage)](
 
 
 def get_with_count[V: (Brand, Storage)](
-    session: Session, model: type[V], pk: int
+    session: Session, model: type[V], pk: int, *, user_id: int
 ) -> tuple[V, int] | None:
-    counts = _count_subquery(model)
+    counts = _count_subquery(model, user_id)
     row = session.execute(
         select(model, func.coalesce(counts.c.item_count, 0))
         .outerjoin(counts, counts.c.ref_id == model.id)
-        .where(model.id == pk)
+        .where(model.id == pk, model.user_id == user_id)
     ).first()
     return (row[0], row[1]) if row else None
 
 
 def suggest[V: (Brand, Storage)](
-    session: Session, model: type[V], prefix: str, limit: int = AUTOCOMPLETE_LIMIT
+    session: Session,
+    model: type[V],
+    prefix: str,
+    *,
+    user_id: int,
+    limit: int = AUTOCOMPLETE_LIMIT,
 ) -> list[tuple[V, int]]:
     """Prefix autocomplete, most-used first so frequent choices surface early."""
     key = normalize(prefix)
-    counts = _count_subquery(model)
+    counts = _count_subquery(model, user_id)
     stmt = (
         select(model, func.coalesce(counts.c.item_count, 0).label("item_count"))
         .outerjoin(counts, counts.c.ref_id == model.id)
+        .where(model.user_id == user_id)
         .order_by(func.coalesce(counts.c.item_count, 0).desc(), model.normalized_name)
         .limit(limit)
     )

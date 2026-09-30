@@ -16,7 +16,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.armoi.app"
+      "bundleIdentifier": "com.armoi.app",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.armoi.app",
@@ -33,6 +34,8 @@
     "plugins": [
       "expo-router",
       "expo-localization",
+      "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {

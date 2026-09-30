@@ -2,7 +2,10 @@
 
 Schema shape
 ------------
-``brands`` and ``storages`` are thin, user-grown vocabularies (the "brand
+``users`` owns every library row. Auth is OAuth (Google / Apple); the app
+issues its own JWTs after verifying the provider ID token.
+
+``brands`` and ``storages`` are thin, per-user vocabularies (the "brand
 library" and "storage library"); items reference them by FK so a rename
 propagates everywhere.
 
@@ -39,6 +42,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config import (
+    AUTH_PROVIDERS,
     GENDERS,
     MAX_BRAND_LENGTH,
     MAX_NAME_LENGTH,
@@ -66,19 +70,48 @@ class TimestampMixin:
     )
 
 
+class User(TimestampMixin, Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    display_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    provider: Mapped[str] = mapped_column(String(16), nullable=False)
+    provider_sub: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Bumped on logout so previously issued refresh tokens stop validating.
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    brands: Mapped[list[Brand]] = relationship(back_populates="user")
+    storages: Mapped[list[Storage]] = relationship(back_populates="user")
+    items: Mapped[list[Item]] = relationship(back_populates="user")
+
+    __table_args__ = (
+        CheckConstraint(
+            "provider IN " + str(AUTH_PROVIDERS), name="ck_users_provider"
+        ),
+        UniqueConstraint("provider", "provider_sub", name="uq_users_provider_sub"),
+        Index("ix_users_email", "email"),
+    )
+
+
 class Brand(TimestampMixin, Base):
     __tablename__ = "brands"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(MAX_BRAND_LENGTH), nullable=False)
-    # Case-insensitive uniqueness: "Totême" and "totême" are one brand.
+    # Case-insensitive uniqueness within a library: "Totême" and "totême" are one brand.
     normalized_name: Mapped[str] = mapped_column(String(MAX_BRAND_LENGTH), nullable=False)
 
+    user: Mapped[User] = relationship(back_populates="brands")
     items: Mapped[list[Item]] = relationship(back_populates="brand")
 
     __table_args__ = (
-        UniqueConstraint("normalized_name", name="uq_brands_normalized_name"),
-        Index("ix_brands_normalized_name", "normalized_name"),
+        UniqueConstraint("user_id", "normalized_name", name="uq_brands_user_normalized_name"),
+        Index("ix_brands_user_normalized_name", "user_id", "normalized_name"),
     )
 
 
@@ -86,14 +119,20 @@ class Storage(TimestampMixin, Base):
     __tablename__ = "storages"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(MAX_STORAGE_LENGTH), nullable=False)
     normalized_name: Mapped[str] = mapped_column(String(MAX_STORAGE_LENGTH), nullable=False)
 
+    user: Mapped[User] = relationship(back_populates="storages")
     items: Mapped[list[Item]] = relationship(back_populates="storage")
 
     __table_args__ = (
-        UniqueConstraint("normalized_name", name="uq_storages_normalized_name"),
-        Index("ix_storages_normalized_name", "normalized_name"),
+        UniqueConstraint(
+            "user_id", "normalized_name", name="uq_storages_user_normalized_name"
+        ),
+        Index("ix_storages_user_normalized_name", "user_id", "normalized_name"),
     )
 
 
@@ -101,6 +140,9 @@ class Item(TimestampMixin, Base):
     __tablename__ = "items"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(MAX_NAME_LENGTH), nullable=False)
 
     brand_id: Mapped[int | None] = mapped_column(
@@ -122,6 +164,7 @@ class Item(TimestampMixin, Base):
     # client sends *its* today so the answer does not depend on server time.
     last_used_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    user: Mapped[User] = relationship(back_populates="items")
     brand: Mapped[Brand | None] = relationship(back_populates="items", lazy="joined")
     storage: Mapped[Storage | None] = relationship(back_populates="items", lazy="joined")
     seasons: Mapped[list[ItemSeason]] = relationship(
@@ -141,6 +184,7 @@ class Item(TimestampMixin, Base):
         CheckConstraint(
             "price_amount IS NULL OR price_amount >= 0", name="ck_items_price_non_negative"
         ),
+        Index("ix_items_user_id", "user_id"),
         Index("ix_items_category_id", "category_id"),
         Index("ix_items_brand_id", "brand_id"),
         Index("ix_items_storage_id", "storage_id"),

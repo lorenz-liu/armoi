@@ -1,7 +1,24 @@
 # Armoi — backend (`infra`)
 
-FastAPI + SQLAlchemy + SQLite. Serves the item library, the brand and storage
-vocabularies, the category tree and the uploaded item images.
+FastAPI + SQLAlchemy. Serves the item library, brand and storage vocabularies,
+the category tree and uploaded item images. Locally it uses SQLite + disk
+media; on Fly.io it uses Postgres + Tigris (S3).
+
+## Auth and multi-user
+
+Every library row is owned by a `User` (Google or Apple ID). The mobile app
+sends a provider **ID token** to `POST /api/v1/auth/google` or `/auth/apple`;
+the API verifies it against the provider JWKS, upserts the user, and returns
+Armoi JWTs (`access` + `refresh`). Subsequent `/api/v1/*` calls require
+`Authorization: Bearer <access>`.
+
+Public without auth: `/health`, `/api/v1/meta`, `/api/v1/categories`,
+`/api/v1/auth/google|apple|refresh`.
+
+## Deploy
+
+See [DEPLOY.md](DEPLOY.md) for Fly.io (Postgres + Tigris), secrets, and the
+mobile env vars that point the app at the hosted API.
 
 ## Run
 
@@ -19,7 +36,7 @@ Interactive docs: <http://localhost:8000/docs>
 ## Test
 
 ```bash
-.venv/bin/python -m pytest      # 83 functional tests
+.venv/bin/python -m pytest      # functional tests (auth-scoped)
 .venv/bin/ruff check app tests scripts
 ```
 
@@ -29,32 +46,34 @@ Interactive docs: <http://localhost:8000/docs>
 | --- | --- |
 | `app/config.py` | **Every** tunable constant. Nothing else declares one. |
 | `app/db.py` | Engine, session factory, SQLite pragmas, additive schema sync. |
-| `app/models.py` | ORM schema. |
+| `app/models.py` | ORM schema (users + per-user library). |
+| `app/auth/` | JWT issue/verify and Google/Apple ID-token checks. |
 | `app/schemas.py` | Wire contract (Pydantic). |
 | `app/errors.py` | Status-code aliases stable across Starlette renames. |
-| `app/services/` | Business logic: `items`, `images`, `vocabulary`. |
-| `app/routers/` | HTTP surface: `items`, `vocabularies`, `catalog`. |
+| `app/services/` | Business logic: `items`, `images`, `vocabulary`, `storage`. |
+| `app/routers/` | HTTP surface: `auth`, `items`, `vocabularies`, `catalog`. |
 | `app/categories_data.py` | Generated category tree — do not hand-edit. |
+| `alembic/` | Schema migrations (production). |
+| `Dockerfile` / `fly.toml` | Fly.io packaging. |
 | `scripts/build_categories.py` | Regenerates the tree from `TODO.md` (Python + TypeScript). |
 
 ## Data model
 
 ```
-brands ──┐                       ┌── item_seasons   (item_id, season)
-         ├──< items >────────────┼── item_images    (ordered, ≤ 10)
-storages ┘        └──< item_pairings >──┘ (symmetric, stored a<b)
+users ──┬── brands ──┐                       ┌── item_seasons
+        ├── storages ─┼──< items >───────────┼── item_images
+        └── items ────┘        └──< item_pairings >──┘
 ```
 
-* Brands and storages are **user-grown vocabularies**: naming one on an item
+* Brands and storages are **per-user vocabularies**: naming one on an item
   creates it, matched case- and whitespace-insensitively, then offered back
   through `/brands/suggest?q=` prefix autocomplete.
 * Categories are **not** a table. The tree is a fixed generated vocabulary and
   items store its dot-path id (`clothing.outerwear.coats`), so filtering a
   branch is a prefix match over one indexed column.
-* There is no migration framework. `create_all` builds the schema and
-  `init_db` additionally adds any *nullable* column a model gained after the
-  database already existed, so a new field does not cost you your library.
-  Anything else raises rather than guessing.
+* Production schema changes go through Alembic. Locally, `create_all` still
+  builds a fresh SQLite file on first boot. An older single-user database
+  cannot be upgraded in place — use `make db reset`.
 * Pairings are symmetric by construction: the row is always written with
   `item_a_id < item_b_id` and read from either end, so A↔B needs no duplicate.
 
@@ -62,6 +81,9 @@ storages ┘        └──< item_pairings >──┘ (symmetric, stored a<b)
 
 ```
 GET    /health
+POST   /api/v1/auth/google|/apple|/refresh
+GET    /api/v1/auth/me
+POST   /api/v1/auth/logout
 GET    /api/v1/items                 search + filters + sort + paging
 POST   /api/v1/items
 GET    /api/v1/items/{id}
@@ -79,7 +101,7 @@ GET    /api/v1/brands   /suggest  /{id}  /{id}/items      (+ POST/PUT/DELETE)
 GET    /api/v1/storages /suggest  /{id}  /{id}/items      (+ POST/PUT/DELETE)
 GET    /api/v1/categories  /categories/flat
 GET    /api/v1/meta  /stats
-GET    /media/{filename}
+GET    /media/{filename}             (local media only; S3 returns absolute URLs)
 ```
 
 `GET /items` query parameters: `search`, `brand_id[]`, `storage_id[]`,

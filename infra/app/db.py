@@ -1,4 +1,10 @@
-"""Engine, session factory and the FastAPI session dependency."""
+"""Engine, session factory and the FastAPI session dependency.
+
+Production schema changes go through Alembic (`alembic upgrade head`).
+`init_db` still runs `create_all` so a fresh local SQLite file appears without
+a manual migrate step; additive column sync remains for nullable columns on
+dev databases that pre-date a model field.
+"""
 
 from __future__ import annotations
 
@@ -51,11 +57,9 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 def _add_missing_columns(target_engine: Engine) -> list[str]:
     """Add columns the models declare but an existing table lacks.
 
-    Armoi is a single-user local app, so it carries no migration framework:
-    `create_all` builds the schema and this closes the one gap that leaves —
-    a column added to a model after the database already exists. Only
-    nullable columns (or ones with a server default) can be added this way;
-    anything else needs a real migration and is reported rather than guessed.
+    Only nullable columns (or ones with a server default) can be added this
+    way. Breaking changes — new NOT NULL columns, constraint renames — belong
+    in Alembic migrations; production should not rely on this helper.
     """
     from sqlalchemy import inspect, text
 
@@ -73,7 +77,7 @@ def _add_missing_columns(target_engine: Engine) -> list[str]:
                 if not column.nullable and column.server_default is None:
                     raise RuntimeError(
                         f"{table.name}.{column.name} is NOT NULL with no default; "
-                        "it cannot be added to an existing table automatically."
+                        "run `alembic upgrade head` (or reset the local database)."
                     )
                 ddl = column.type.compile(dialect=target_engine.dialect)
                 connection.execute(

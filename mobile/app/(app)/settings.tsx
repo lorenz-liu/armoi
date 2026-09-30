@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, type ItemField, type ViewMode } from '@/api';
 import {
+  Button,
   Chip,
   Icon,
   IconButton,
@@ -19,6 +20,7 @@ import {
 } from '@/components';
 import { API, ITEM_FIELDS, LANGUAGES, VIEW_MODES } from '@/config';
 import { useAsync } from '@/hooks/useAsync';
+import { useAuth } from '@/hooks/useAuth';
 import { usePreferences } from '@/hooks/usePreferences';
 import { useI18n, type Language, type TranslationKey } from '@/i18n';
 import { color, layout, space } from '@/theme';
@@ -37,6 +39,7 @@ export default function SettingsRoute() {
   const router = useRouter();
   const { t, language, setLanguage } = useI18n();
   const { viewMode, setViewMode, itemFields, toggleItemField } = usePreferences();
+  const { user, busy, signOut } = useAuth();
   const insets = useSafeAreaInsets();
 
   const stats = useAsync(useCallback(() => api.catalog.stats(), []), []);
@@ -72,6 +75,28 @@ export default function SettingsRoute() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        <Section title={t('settings.account')}>
+          <Surface corner="lg" style={{ padding: space.md, gap: space.sm }}>
+            <Text variant="body">{user?.display_name || user?.email || t('settings.signedIn')}</Text>
+            {user?.email ? (
+              <Text variant="caption" tone="faint">
+                {user.email}
+              </Text>
+            ) : null}
+            <Text variant="caption" tone="faint">
+              {t('settings.signedInVia', { provider: user?.provider ?? '—' })}
+            </Text>
+            <Button
+              label={t('auth.signOut')}
+              variant="secondary"
+              loading={busy}
+              onPress={() => {
+                void signOut();
+              }}
+            />
+          </Surface>
+        </Section>
+
         <Section title={t('settings.language')}>
           <View style={{ flexDirection: 'row', gap: space.xs }}>
             {LANGUAGES.map((code: Language) => (

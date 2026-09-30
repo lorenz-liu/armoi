@@ -1,6 +1,6 @@
 /**
  * Thin fetch wrapper: base URL, timeout, retry-with-backoff on transport
- * failures, and a typed error every caller can branch on.
+ * failures, Bearer auth, and a typed error every caller can branch on.
  */
 
 import { API } from '@/config';
@@ -21,9 +21,22 @@ export class ApiError extends Error {
   }
 }
 
+type AuthHandlers = {
+  getAccessToken: () => Promise<string | null>;
+  refreshAccessToken: () => Promise<string | null>;
+  onUnauthorized: () => Promise<void>;
+};
+
+let authHandlers: AuthHandlers | null = null;
+
+/** Wired once by AuthProvider so the client stays free of a circular import. */
+export function setAuthHandlers(handlers: AuthHandlers | null): void {
+  authHandlers = handlers;
+}
+
 export const apiUrl = (path: string): string => `${API.baseUrl}${API.prefix}${path}`;
 
-/** Media paths come back from the API already rooted at `/media`. */
+/** Media paths come back from the API already rooted at `/media`, or as absolute URLs. */
 export const mediaUrl = (path: string): string =>
   path.startsWith('http') ? path : `${API.baseUrl}${path}`;
 
@@ -71,6 +84,14 @@ async function once(url: string, init: RequestInit): Promise<Response> {
   }
 }
 
+function mergeHeaders(init: RequestInit, token: string | null): Headers {
+  const headers = new Headers(init.headers);
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  return headers;
+}
+
 export async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -78,10 +99,22 @@ export async function request<T>(
 ): Promise<T> {
   const url = apiUrl(path) + buildQuery(query);
   let lastError: unknown;
+  let token = authHandlers ? await authHandlers.getAccessToken() : null;
+  let didRefresh = false;
 
   for (let attempt = 0; attempt <= API.retries; attempt += 1) {
     try {
-      const response = await once(url, init);
+      const response = await once(url, { ...init, headers: mergeHeaders(init, token) });
+      if (response.status === 401 && authHandlers && !didRefresh) {
+        didRefresh = true;
+        token = await authHandlers.refreshAccessToken();
+        if (token) {
+          attempt -= 1;
+          continue;
+        }
+        await authHandlers.onUnauthorized();
+        throw new ApiError(401, await readDetail(response), url);
+      }
       if (!response.ok) {
         // 4xx are the caller's problem; retrying cannot change the answer.
         throw new ApiError(response.status, await readDetail(response), url);

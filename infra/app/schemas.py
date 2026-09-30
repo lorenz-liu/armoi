@@ -198,3 +198,35 @@ class Suggestion(BaseModel):
 
 
 CategoryNode.model_rebuild()
+
+
+# --- auth -------------------------------------------------------------------
+class UserRead(ORMModel):
+    id: int
+    email: str | None = None
+    display_name: str | None = None
+    avatar_url: str | None = None
+    provider: Literal["google", "apple"]
+    created_at: datetime
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: Annotated[str, Field(min_length=10)]
+
+
+class AppleAuthRequest(BaseModel):
+    id_token: Annotated[str, Field(min_length=10)]
+    full_name: Annotated[str | None, Field(max_length=160)] = None
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: Annotated[str, Field(min_length=10)]
+
+
+class AuthTokens(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: UserRead
+

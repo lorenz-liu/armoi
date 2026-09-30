@@ -24,6 +24,22 @@ Just make sure the phone is on the same Wi-Fi and macOS's firewall is not
 blocking Python. Set `EXPO_PUBLIC_API_BASE_URL` only to point somewhere else —
 a deployed server or a tunnel.
 
+## Sign-in
+
+The app requires Google or Apple Sign-In. Tokens live in SecureStore; the API
+client attaches `Authorization: Bearer` and refreshes on 401.
+
+| Env | Purpose |
+| --- | --- |
+| `EXPO_PUBLIC_API_BASE_URL` | Hosted API (e.g. `https://armoi-api.fly.dev`) |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google iOS OAuth client |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Google Android OAuth client |
+| `EXPO_PUBLIC_APPLE_CLIENT_ID` | Bundle id / Services ID (`com.armoi.app`) |
+
+Apple Authentication needs a **dev client / EAS Build** (not Expo Go). Mirror
+the same client IDs on the API as `ARMOI_GOOGLE_CLIENT_IDS` and
+`ARMOI_APPLE_CLIENT_ID`. Full Fly setup: `infra/DEPLOY.md`.
+
 ## Checks
 
 ```bash
@@ -41,24 +57,26 @@ npm test            # 168 tests
 | `src/i18n/` | `en`/`zh` dictionaries, typed dot-path `t()`, category labels, formatting. |
 | `src/api/` | Typed endpoint bindings over a fetch client with timeout + retry. |
 | `src/api/index.ts` | Also builds multipart parts for uploads — see the note below. |
-| `src/hooks/` | `useAsync`, `useDebounced`, `usePreferences`, `useLibrary`. |
+| `src/hooks/` | `useAsync`, `useDebounced`, `usePreferences`, `useLibrary`, `useAuth`. |
 | `src/components/ui/` | Primitives: Text, Surface, Button, Chip, TextField, Sheet… |
 | `src/components/library/` | Domain components: cards, grid, header, pickers, the edge rail. |
 | `src/features/` | Screen bodies shared by more than one route. |
 | `src/data/categories.ts` | Generated category tree — do not hand-edit. |
-| `app/` | expo-router routes. |
+| `app/(auth)/` | Login. |
+| `app/(app)/` | Authenticated expo-router screens. |
 
 ## Routes
 
 ```
-/                     the library
-/item/[id]            one piece
-/item/edit?id=        create (no id) or edit
-/brands               the brand library
-/brands/[id]          everything of one brand
-/storages             the storage library
-/storages/[id]        everything in one place
-/settings             language, default view, counters, server status
+/(auth)/login         Google / Apple Sign-In
+/(app)/               the library
+/(app)/item/[id]      one piece
+/(app)/item/edit?id=  create (no id) or edit
+/(app)/brands         the brand library
+/(app)/brands/[id]    everything of one brand
+/(app)/storages       the storage library
+/(app)/storages/[id]  everything in one place
+/(app)/settings       account, language, view, counters, server status
 ```
 
 ## Uploading photos

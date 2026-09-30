@@ -29,7 +29,8 @@ PY     := $(VENV)/bin/python
 DB_FILE   ?= $(INFRA)/data/armoi.db
 MEDIA_DIR ?= $(INFRA)/media
 
-.PHONY: help install dev api app db db-reset reset test test-api test-app lint categories clean
+.PHONY: help install dev api app db db-reset reset test test-api test-app lint categories clean migrate deploy
+
 
 ## help: list the available targets
 help:
@@ -112,6 +113,14 @@ db-reset:
 ## categories: regenerate the category tree from TODO.md (Python + TypeScript)
 categories: $(PY)
 	cd $(INFRA) && $(BIN)/python scripts/build_categories.py --write
+
+## migrate: apply Alembic migrations to ARMOI_DATABASE_URL
+migrate: $(PY) $(INFRA)/.env
+	cd $(INFRA) && $(BIN)/alembic upgrade head
+
+## deploy: push the API to Fly.io (requires flyctl + secrets — see infra/DEPLOY.md)
+deploy: $(INFRA)/.env
+	cd $(INFRA) && fly deploy
 
 # --- checks -----------------------------------------------------------------
 

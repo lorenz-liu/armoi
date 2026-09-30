@@ -6,6 +6,13 @@ from app.config import MAX_IMAGES_PER_ITEM, settings
 from tests.conftest import API, make_item, png_bytes
 
 
+def media_files(root: Path) -> list[Path]:
+    """Flat file list under media/ (keys live in per-user nested folders)."""
+    if not root.exists():
+        return []
+    return sorted(path for path in root.rglob("*") if path.is_file())
+
+
 def upload(client, item_id: int, count: int = 1, content_type: str = "image/png"):
     files = [("files", (f"shot{i}.png", png_bytes(), content_type)) for i in range(count)]
     return client.post(f"{API}/items/{item_id}/images", files=files)
@@ -40,13 +47,13 @@ def test_cap_is_enforced_across_separate_uploads(client):
 def test_rejected_batch_writes_no_files(client, tmp_env: Path):
     item = make_item(client)
     upload(client, item["id"], count=1)
-    before = sorted((tmp_env / "media").iterdir())
+    before = media_files(tmp_env / "media")
     files = [
         ("files", ("ok.png", png_bytes(), "image/png")),
         ("files", ("bad.txt", b"not an image", "text/plain")),
     ]
     assert client.post(f"{API}/items/{item['id']}/images", files=files).status_code == 415
-    assert sorted((tmp_env / "media").iterdir()) == before
+    assert media_files(tmp_env / "media") == before
 
 
 def test_reorder_rewrites_positions(client):
@@ -73,9 +80,9 @@ def test_reorder_must_list_every_current_image(client):
 def test_delete_image_removes_row_and_file(client, tmp_env: Path):
     item = make_item(client)
     image = upload(client, item["id"], count=1).json()[0]
-    assert len(list((tmp_env / "media").iterdir())) == 1
+    assert len(media_files(tmp_env / "media")) == 1
     assert client.delete(f"{API}/items/{item['id']}/images/{image['id']}").status_code == 204
-    assert list((tmp_env / "media").iterdir()) == []
+    assert media_files(tmp_env / "media") == []
 
 
 def test_delete_image_belonging_to_another_item_is_404(client):
@@ -88,7 +95,7 @@ def test_deleting_an_item_cleans_up_its_files(client, tmp_env: Path):
     item = make_item(client)
     upload(client, item["id"], count=2)
     client.delete(f"{API}/items/{item['id']}")
-    assert list((tmp_env / "media").iterdir()) == []
+    assert media_files(tmp_env / "media") == []
 
 
 def test_uploaded_file_is_served_back(client):

@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 
 from app.config import MAX_IMAGES_PER_ITEM
-from app.deps import FiltersDep, SessionDep
+from app.deps import CurrentUser, FiltersDep, SessionDep
 from app.errors import NOT_FOUND, UNPROCESSABLE
 from app.models import ItemImage
 from app.schemas import (
@@ -26,8 +26,10 @@ router = APIRouter(prefix="/items", tags=["items"])
 
 
 @router.get("", response_model=Page[ItemSummary], summary="List / search / filter the library")
-def list_items(session: SessionDep, filters: FiltersDep) -> Page[ItemSummary]:
-    rows, total = item_service.list_items(session, filters)
+def list_items(
+    session: SessionDep, filters: FiltersDep, user: CurrentUser
+) -> Page[ItemSummary]:
+    rows, total = item_service.list_items(session, filters, user_id=user.id)
     return Page[ItemSummary](
         items=[item_service.serialize_summary(row) for row in rows],
         total=total,
@@ -37,26 +39,32 @@ def list_items(session: SessionDep, filters: FiltersDep) -> Page[ItemSummary]:
 
 
 @router.post("", response_model=ItemRead, status_code=status.HTTP_201_CREATED)
-def create_item(payload: ItemCreate, session: SessionDep) -> ItemRead:
-    item = item_service.create_item(session, payload)
+def create_item(payload: ItemCreate, session: SessionDep, user: CurrentUser) -> ItemRead:
+    item = item_service.create_item(session, payload, user_id=user.id)
     return item_service.serialize_detail(session, item)
 
 
 @router.get("/{item_id}", response_model=ItemRead)
-def read_item(item_id: int, session: SessionDep) -> ItemRead:
-    return item_service.serialize_detail(session, item_service.get_item(session, item_id))
+def read_item(item_id: int, session: SessionDep, user: CurrentUser) -> ItemRead:
+    return item_service.serialize_detail(
+        session, item_service.get_item(session, item_id, user_id=user.id)
+    )
 
 
 @router.put("/{item_id}", response_model=ItemRead)
-def update_item(item_id: int, payload: ItemUpdate, session: SessionDep) -> ItemRead:
-    item = item_service.get_item(session, item_id)
-    item_service.update_item(session, item, payload)
+def update_item(
+    item_id: int, payload: ItemUpdate, session: SessionDep, user: CurrentUser
+) -> ItemRead:
+    item = item_service.get_item(session, item_id, user_id=user.id)
+    item_service.update_item(session, item, payload, user_id=user.id)
     return item_service.serialize_detail(session, item)
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_item(item_id: int, session: SessionDep) -> Response:
-    item_service.delete_item(session, item_service.get_item(session, item_id))
+def delete_item(item_id: int, session: SessionDep, user: CurrentUser) -> Response:
+    item_service.delete_item(
+        session, item_service.get_item(session, item_id, user_id=user.id)
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -68,23 +76,30 @@ def delete_item(item_id: int, session: SessionDep) -> Response:
     summary=f"Attach up to {MAX_IMAGES_PER_ITEM} images in total",
 )
 def upload_images(
-    item_id: int, session: SessionDep, files: list[UploadFile] = File(...)
+    item_id: int,
+    session: SessionDep,
+    user: CurrentUser,
+    files: list[UploadFile] = File(...),
 ) -> list[ImageRead]:
-    item = item_service.get_item(session, item_id)
+    item = item_service.get_item(session, item_id, user_id=user.id)
     created = image_service.add_images(session, item, files)
     return [item_service.serialize_image(image) for image in created]
 
 
 @router.put("/{item_id}/images/order", response_model=list[ImageRead])
-def reorder_images(item_id: int, payload: ImageReorder, session: SessionDep) -> list[ImageRead]:
-    item = item_service.get_item(session, item_id)
+def reorder_images(
+    item_id: int, payload: ImageReorder, session: SessionDep, user: CurrentUser
+) -> list[ImageRead]:
+    item = item_service.get_item(session, item_id, user_id=user.id)
     ordered = image_service.reorder(session, item, payload.image_ids)
     return [item_service.serialize_image(image) for image in ordered]
 
 
 @router.delete("/{item_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_image(item_id: int, image_id: int, session: SessionDep) -> Response:
-    item = item_service.get_item(session, item_id)
+def delete_image(
+    item_id: int, image_id: int, session: SessionDep, user: CurrentUser
+) -> Response:
+    item = item_service.get_item(session, item_id, user_id=user.id)
     image = session.get(ItemImage, image_id)
     if image is None or image.item_id != item.id:
         raise HTTPException(NOT_FOUND, detail="Image not found on this item.")
@@ -94,45 +109,53 @@ def delete_image(item_id: int, image_id: int, session: SessionDep) -> Response:
 
 # --- usage ------------------------------------------------------------------
 @router.post("/{item_id}/use", response_model=ItemRead, summary="Record that it was worn")
-def mark_used(item_id: int, payload: UsageWrite, session: SessionDep) -> ItemRead:
-    item = item_service.get_item(session, item_id)
+def mark_used(
+    item_id: int, payload: UsageWrite, session: SessionDep, user: CurrentUser
+) -> ItemRead:
+    item = item_service.get_item(session, item_id, user_id=user.id)
     item_service.mark_used(session, item, payload.used_on)
     return item_service.serialize_detail(session, item)
 
 
 @router.delete("/{item_id}/use", response_model=ItemRead, summary="Forget when it was worn")
-def clear_used(item_id: int, session: SessionDep) -> ItemRead:
-    item = item_service.get_item(session, item_id)
+def clear_used(item_id: int, session: SessionDep, user: CurrentUser) -> ItemRead:
+    item = item_service.get_item(session, item_id, user_id=user.id)
     item_service.clear_used(session, item)
     return item_service.serialize_detail(session, item)
 
 
 # --- pairings ---------------------------------------------------------------
 @router.get("/{item_id}/pairings", response_model=list[ItemSummary])
-def list_pairings(item_id: int, session: SessionDep) -> list[ItemSummary]:
-    item_service.get_item(session, item_id)
+def list_pairings(
+    item_id: int, session: SessionDep, user: CurrentUser
+) -> list[ItemSummary]:
+    item_service.get_item(session, item_id, user_id=user.id)
     return [
         item_service.serialize_summary(partner)
-        for partner in item_service.paired_items(session, item_id)
+        for partner in item_service.paired_items(session, item_id, user_id=user.id)
     ]
 
 
 @router.post(
     "/{item_id}/pairings", response_model=list[ItemSummary], status_code=status.HTTP_201_CREATED
 )
-def add_pairing(item_id: int, payload: PairingWrite, session: SessionDep) -> list[ItemSummary]:
-    item = item_service.get_item(session, item_id)
+def add_pairing(
+    item_id: int, payload: PairingWrite, session: SessionDep, user: CurrentUser
+) -> list[ItemSummary]:
+    item = item_service.get_item(session, item_id, user_id=user.id)
     if payload.item_id == item_id:
         raise HTTPException(UNPROCESSABLE, detail="An item cannot pair with itself.")
-    item_service.add_pairing(session, item, payload.item_id)
+    item_service.add_pairing(session, item, payload.item_id, user_id=user.id)
     return [
         item_service.serialize_summary(partner)
-        for partner in item_service.paired_items(session, item_id)
+        for partner in item_service.paired_items(session, item_id, user_id=user.id)
     ]
 
 
 @router.delete("/{item_id}/pairings/{partner_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_pairing(item_id: int, partner_id: int, session: SessionDep) -> Response:
-    item = item_service.get_item(session, item_id)
-    item_service.remove_pairing(session, item, partner_id)
+def remove_pairing(
+    item_id: int, partner_id: int, session: SessionDep, user: CurrentUser
+) -> Response:
+    item = item_service.get_item(session, item_id, user_id=user.id)
+    item_service.remove_pairing(session, item, partner_id, user_id=user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

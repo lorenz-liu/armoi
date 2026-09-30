@@ -23,6 +23,8 @@ price — then browse the collection as a lookbook rather than a spreadsheet.
   brand, storage, category, price, last worn, seasons.
 - **Bilingual** — the whole UI, including all 200 category names, in English
   and Chinese, switchable in Settings.
+- **Accounts** — Google or Apple Sign-In; each user has a private library.
+  The API deploys to Fly.io (Postgres + Tigris). See `infra/DEPLOY.md`.
 
 ## Repository
 
@@ -59,9 +61,11 @@ URLs. Override with `EXPO_PUBLIC_API_BASE_URL` only to point elsewhere.
 | `make dev` | Backend and Expo dev server together. |
 | `make api` / `make app` | Just one side. |
 | `make db reset` | Delete the database and uploaded images (asks first). |
-| `make test` | Both suites — 83 backend, 168 mobile. |
+| `make test` | Both suites — backend + mobile. |
 | `make lint` | ruff, then tsc and eslint. |
 | `make categories` | Regenerate the category tree from `TODO.md`. |
+| `make migrate` | Apply Alembic migrations. |
+| `make deploy` | `fly deploy` for the API (`infra/DEPLOY.md`). |
 | `make install` | Dependencies and `.env` files only. |
 | `make clean` | Remove artefacts, caches and installed dependencies. |
 

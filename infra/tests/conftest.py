@@ -1,4 +1,4 @@
-"""Test harness: a throwaway SQLite file + media dir per test."""
+"""Test harness: throwaway SQLite + media dir, authenticated as a default user."""
 
 from __future__ import annotations
 
@@ -10,9 +10,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
 from app import db as db_module
+from app.auth.tokens import create_token_pair
 from app.config import settings
 from app.db import Base, build_engine, get_session
 from app.main import create_app
+from app.models import User
+from app.services.storage import reset_storage_cache
 
 API = settings.api_prefix
 
@@ -20,6 +23,9 @@ API = settings.api_prefix
 @pytest.fixture()
 def tmp_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(settings, "media_dir", str(tmp_path / "media"))
+    monkeypatch.setattr(settings, "media_backend", "local")
+    monkeypatch.setattr(settings, "jwt_secret", "test-secret-at-least-32-bytes-long!!")
+    reset_storage_cache()
     return tmp_path
 
 
@@ -34,6 +40,20 @@ def client(tmp_env: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClien
     monkeypatch.setattr(db_module, "engine", engine)
     monkeypatch.setattr(db_module, "SessionLocal", TestingSession)
 
+    # Seed a default user so existing tests can authenticate once.
+    with TestingSession() as seed:
+        user = User(
+            provider="google",
+            provider_sub="test-user",
+            email="test@armoi.app",
+            display_name="Test User",
+        )
+        seed.add(user)
+        seed.commit()
+        seed.refresh(user)
+        user_id = user.id
+        token_version = user.token_version
+
     def override() -> Iterator:
         session = TestingSession()
         try:
@@ -47,9 +67,16 @@ def client(tmp_env: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClien
 
     app = create_app()
     app.dependency_overrides[get_session] = override
+
+    pair = create_token_pair(user_id=user_id, token_version=token_version)
     with TestClient(app) as test_client:
+        test_client.headers.update({"Authorization": f"Bearer {pair.access_token}"})
+        test_client.user_id = user_id  # type: ignore[attr-defined]
+        test_client.refresh_token = pair.refresh_token  # type: ignore[attr-defined]
+        test_client.testing_session = TestingSession  # type: ignore[attr-defined]
         yield test_client
     engine.dispose()
+    reset_storage_cache()
 
 
 # --- helpers ---------------------------------------------------------------
